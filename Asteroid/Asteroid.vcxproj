@@ -149,6 +149,7 @@
     <ClInclude Include="Entity.hpp" />
     <ClInclude Include="MathUtil.hpp" />
     <ClInclude Include="Rigidbody.hpp" />
+    <ClInclude Include="stb_image.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="Vertex.hpp" />
   </ItemGroup>

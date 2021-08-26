@@ -13,6 +13,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #define MATH_UTIL_IMPLEMENTATION
 #include "MathUtil.hpp"
 
@@ -21,6 +24,21 @@
 
 #define S_WIDTH 1200
 #define S_HEIGHT 720
+
+struct WorldData
+{
+	Vec3f light_dir;
+	Vec3f camera_pos;
+};
+
+struct UniformLoc
+{
+	GLint mvp = 0;
+	GLint model = 0;
+	GLint texture = 0;
+	GLint light_dir = 0;
+	GLint camera_pos = 0;
+}uniform_loc;
 
 SDL_Window* window;
 SDL_GLContext gl_context;
@@ -85,7 +103,6 @@ int InitOpenglWindow()
 	return 1;
 }
 
-
 void read_file(const char*  file_path, char* file_content)
 {
 	std::ifstream _file;
@@ -107,8 +124,6 @@ GLuint LoadShaders(const char* vertex_path, const char* fragment_path)
 
 	read_file(vertex_path, vertex_shader);
 	read_file(fragment_path, fragment_shader);
-
-	printf("%s\n", vertex_shader);
 
 	GLuint v_shader = glCreateShader(GL_VERTEX_SHADER);
 
@@ -287,13 +302,19 @@ void benchmark(int iterations)
 
 }
 
-GLint mat_location = 0;
-void draw_entity(const Entity& entity, const Mat4x4& transform, GLenum mode=GL_LINE_LOOP)
+
+void draw_entity(const Entity& entity, WorldData world_data, const Mat4x4& projection, const Mat4x4& view, const Mat4x4& model, GLenum mode=GL_LINE_LOOP)
 {
+	glBindTexture(GL_TEXTURE0, entity.texture);
 	for (int i = 0; i < entity.vao_count; i++)
 	{
 		glBindVertexArray(entity.vaos[i]);
-		glUniformMatrix4fv(mat_location, 1, GL_FALSE, transform.data);
+		glUniformMatrix4fv(uniform_loc.model, 1, GL_FALSE, model.data);
+		glUniformMatrix4fv(uniform_loc.mvp, 1, GL_FALSE, (projection*view*model).data);
+		glUniform1i(uniform_loc.texture, GL_TEXTURE0);
+		glUniform3f(uniform_loc.light_dir, world_data.light_dir.x, world_data.light_dir.y, world_data.light_dir.z);
+		glUniform3f(uniform_loc.camera_pos, world_data.camera_pos.x, world_data.camera_pos.y, world_data.camera_pos.z);
+
 		glDrawElements(mode, entity.index_counts[i], GL_UNSIGNED_INT, (void*)0);
 	}
 }
@@ -383,6 +404,7 @@ void load_obj(const char* obj_name, std::vector<Float_32>& vertices, std::vector
 					tinyobj::real_t ty = attrib.texcoords[2 * size_t(idx.texcoord_index) + 1];
 					vertices.push_back(tx);
 					vertices.push_back(ty);
+					
 				}
 				else
 				{
@@ -444,10 +466,11 @@ Entity make_quad(GLuint texture)
 
 Entity make_cube(const char* obj_file_path)
 {
+
 	Entity cube;
 	std::vector<Float_32> vertices;
 	std::vector< std::vector<Int_32>> indices;
-	load_obj(obj_file_path, vertices, indices, 0.001f);
+	load_obj(obj_file_path, vertices, indices, 0.01f);
 	int i = 0;
 	for (auto& ind_arr : indices)
 	{
@@ -457,35 +480,59 @@ Entity make_cube(const char* obj_file_path)
 		cube.vao_count++;
 		i++;
 	}
-	cube.position = { 1,0,1 };
+	cube.position = { 0,0,0};
 	cube.rotation = { 0,0,0 };
 
+	// load texture
 
+	Int_32 width = 0;
+	Int_32 height = 0;
+	Int_32 comp = 0;
+	stbi_uc* tex_data = stbi_load("Asset/cube_diffuse.png", &width, &height, &comp, 0);
+	if (!tex_data)
+	{
+		printf("Failed to load image. skipped texture creation\n");
+		cube.texture = 0;
+	}
+	else
+	{
+		glGenTextures(1, &cube.texture);
+		glBindTexture(GL_TEXTURE_2D, cube.texture);
+		
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
+
+	}
 	return cube;
 }
 
 Entity make_camera()
 {
 	Entity camera;
-	camera.position = { 0,0,0 };
-	camera.rotation = { 0,0,0 };
+	camera.position = { 0,0.1,-0.1 };
+	camera.rotation = { PI/4.f,0,0 };
 	return camera;
 }
 
 Mat4x4 get_transform(Entity& ent)
 {
 	Mat3x3 rot_x = { 1, 0, 0,
-							0, cosf(ent.rotation.y), -sinf(ent.rotation.y),
-							0, sinf(ent.rotation.y), cosf(ent.rotation.y) };
-	Mat3x3 rot_y = { cosf(ent.rotation.x), 0, sinf(ent.rotation.x),
+					0, cosf(ent.rotation.x), -sinf(ent.rotation.x),
+					0, sinf(ent.rotation.x), cosf(ent.rotation.x) };
+
+	Mat3x3 rot_y = { cosf(ent.rotation.y), 0, sinf(ent.rotation.y),
 				0, 1, 0,
-				-sinf(ent.rotation.x), 0,	cosf(ent.rotation.x) };
+				-sinf(ent.rotation.y), 0,	cosf(ent.rotation.y) };
 
 	Mat3x3 rot_z = { cosf(ent.rotation.z), -sinf(ent.rotation.z), 0,
 					sinf(ent.rotation.z), cosf(ent.rotation.z), 0,
 					0,	0,	1}; 
 
-	Mat4x4 transform = rot_y * rot_x;
+	Mat4x4 transform = rot_z * rot_y * rot_x;
 
 	transform(0, 3) = ent.position.x;
 	transform(1, 3) = ent.position.y;
@@ -500,6 +547,9 @@ int main(int argc, char *args[])
 	Float_32 aspect_ratio = 0;
 	Mat4x4 projection = Mat4x4::Perspective(90, 0.001f, 100.f, aspect_ratio);
 	static Vec2f cam_rot = {0,0};
+
+	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
+
 
 	//Mat4x4 projection = Mat4x4::Orthogrpahic(-2, 2, -2, 2, 10, -10);
 	bool is_game_running = true;
@@ -519,16 +569,21 @@ int main(int argc, char *args[])
 		return 0;
 	}
 	glUseProgram(shader_program);
-	mat_location = glGetUniformLocation(shader_program, "mvp");
-
+	uniform_loc.mvp = glGetUniformLocation(shader_program, "mvp");
+	uniform_loc.model = glGetUniformLocation(shader_program, "model");
+	uniform_loc.texture = glGetUniformLocation(shader_program, "tex2d");
+	uniform_loc.light_dir = glGetUniformLocation(shader_program, "dir_light");
+	uniform_loc.camera_pos = glGetUniformLocation(shader_program, "camera_pos");
 	// make game world
-	GLuint fbo = make_frame_buffer();
-	Entity space_ship = make_space_ship();
-	Entity quad = make_quad(0);
+	//GLuint fbo = make_frame_buffer();
+	//Entity space_ship = make_space_ship();
+	//Entity quad = make_quad(0);
 	Entity camera = make_camera();
-	Entity obj_entity = make_cube("Asset/cornell_box.obj");
-
-
+	Entity cube = make_cube("Asset/sphere.obj");
+	//Entity cube = make_cube("Asset/treasure_chest.obj");
+	WorldData render_data;
+	render_data.light_dir = {0,-1.f,1.f};
+	render_data.light_dir.Normalize();
 	SDL_Event game_event;
 	int rotation_direction = 0;
 	int forward_move_factor = 0;
@@ -551,6 +606,7 @@ int main(int argc, char *args[])
 		{
 			switch (game_event.type)
 			{
+			
 			case SDL_KEYDOWN:
 			{
 				switch (game_event.key.keysym.sym)
@@ -619,16 +675,26 @@ int main(int argc, char *args[])
 				break;
 			}
 		}
-		//printf("Mouse motion : (%d, %d)\n", mouse_motion_x, mouse_motion_y);
 
+		Float_32 light_rot_speed = 2.f;
+		if (keystate[SDL_SCANCODE_LEFT])
+			render_data.light_dir.x -= light_rot_speed * delta_time;
+		else if (keystate[SDL_SCANCODE_RIGHT])
+			render_data.light_dir.x += light_rot_speed * delta_time;
+		if (keystate[SDL_SCANCODE_UP])
+			render_data.light_dir.z += light_rot_speed * delta_time;
+		else if (keystate[SDL_SCANCODE_DOWN])
+			render_data.light_dir.z -= light_rot_speed *delta_time;
 
+		render_data.light_dir.Normalize();
+		printf("%f,%f,%f\n", render_data.light_dir.x, render_data.light_dir.y, render_data.light_dir.z);
 		//space_ship.rotation.z += rotation_direction * delta_time * space_ship.angular_speed;
 
 		// Space_ship stuff
-		Mat4x4 space_ship_transform = get_transform(space_ship);
+		//Mat4x4 space_ship_transform = get_transform(space_ship);
 
 		// Cube stuff
-		Mat4x4 cube_transform = get_transform(obj_entity);
+		Mat4x4 cube_transform = get_transform(cube);
 
 
 		// Camera transform stuff
@@ -636,18 +702,20 @@ int main(int argc, char *args[])
 		Vec3f cam_right = cam_transform[0];
 		Vec3f cam_up = cam_transform[2];
 		camera.position += (cam_right * right_move_factor + cam_up*up_move_factor)*delta_time;
-		Vec2f mouse_dir = { mouse_motion_x / (float)S_WIDTH, mouse_motion_y / (float)S_HEIGHT };
+		Vec3f mouse_dir = { mouse_motion_y / (float)S_HEIGHT, mouse_motion_x / (float)S_WIDTH, 0 };
 		camera.rotation += mouse_dir*delta_time*100.f;
+		
+		//printf("%f, %f\n", camera.rotation.x, camera.rotation.y);
 		cam_transform = get_transform(camera);
-
+		render_data.camera_pos = camera.position;
 
 
 		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
 		glClearColor(0.3f, 0.3f, 0.3f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//draw_entity(quad, Mat4x4::Identity(), GL_TRIANGLES);
-		draw_entity(space_ship, projection * cam_transform.GetInverse() * space_ship_transform, GL_TRIANGLES);
-		draw_entity(obj_entity, projection * cam_transform.GetInverse() * cube_transform, GL_TRIANGLES);
+		//draw_entity(space_ship, projection * cam_transform.GetInverse() * space_ship_transform, GL_TRIANGLES);
+		draw_entity(cube, render_data, projection, cam_transform.GetInverse(), cube_transform, GL_TRIANGLES);
 
 
 		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
