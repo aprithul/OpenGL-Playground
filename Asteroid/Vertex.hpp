@@ -14,6 +14,9 @@ struct Vertex
 	float nz;
 	float u;
 	float v;
+	float tx;
+	float ty;
+	float tz;
 };
 
 #endif // !VERTEX_HPP

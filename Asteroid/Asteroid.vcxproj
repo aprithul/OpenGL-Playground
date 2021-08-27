@@ -156,6 +156,8 @@
   <ItemGroup>
     <None Include="Shaders\diffuse.f" />
     <None Include="Shaders\diffuse.v" />
+    <None Include="Shaders\diffuse_line.f" />
+    <None Include="Shaders\diffuse_line.v" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

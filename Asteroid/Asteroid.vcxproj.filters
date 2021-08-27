@@ -49,5 +49,11 @@
     <None Include="Shaders\diffuse.f">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\diffuse_line.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\diffuse_line.v">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

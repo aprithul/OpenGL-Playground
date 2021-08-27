@@ -15,7 +15,8 @@ struct Entity
 	int index_counts[MAX_VAOS] = {};
 	int vao_count = 0;
 	unsigned int vaos[MAX_VAOS] = {};
-	unsigned int texture = 0;
+	unsigned int texture_diffuse = 0;
+	unsigned int texture_normal = 0;
 };
 
 
