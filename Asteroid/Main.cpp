@@ -37,9 +37,10 @@ struct UniformLoc
 	GLint model = 0;
 	GLint texture_diffuse = 0;
 	GLint texture_normal = 0;
+	GLint texture_parallax = 0;
 	GLint light_dir = 0;
 	GLint camera_pos = 0;
-	GLint do_normal_map = 0;
+	GLint lighting_mode = 0;
 	
 };
 
@@ -53,9 +54,10 @@ struct Shader
 		uniform_loc.model = glGetUniformLocation(shader_program, "model");
 		uniform_loc.texture_diffuse = glGetUniformLocation(shader_program, "tex2d");
 		uniform_loc.texture_normal = glGetUniformLocation(shader_program, "texNormal");
+		uniform_loc.texture_parallax = glGetUniformLocation(shader_program, "parallaxMap");
 		uniform_loc.light_dir = glGetUniformLocation(shader_program, "dir_light");
 		uniform_loc.camera_pos = glGetUniformLocation(shader_program, "camera_pos");
-		uniform_loc.do_normal_map = glGetUniformLocation(shader_program, "do_normal_map");
+		uniform_loc.lighting_mode = glGetUniformLocation(shader_program, "lighting_mode");
 	}
 };
 
@@ -356,7 +358,7 @@ void benchmark(int iterations)
 
 }
 
-bool do_normal_map = 0;
+int lighting_mode = 0;
 void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& projection, const Mat4x4& view, const Mat4x4& model, Shader& shader, GLenum mode=GL_LINE_LOOP)
 {
 	glUseProgram(shader.shader_program);
@@ -364,6 +366,8 @@ void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& proj
 	glBindTexture(GL_TEXTURE_2D, entity.texture_diffuse);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, entity.texture_normal);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, entity.texture_parallax);
 
 	for (int i = 0; i < entity.vao_count; i++)
 	{
@@ -372,9 +376,10 @@ void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& proj
 		glUniformMatrix4fv(shader.uniform_loc.mvp, 1, GL_FALSE, (projection*view*model).data);
 		glUniform1i(shader.uniform_loc.texture_diffuse, 0);
 		glUniform1i(shader.uniform_loc.texture_normal, 1);
+		glUniform1i(shader.uniform_loc.texture_parallax, 2);
 		glUniform3f(shader.uniform_loc.light_dir, world_data.light_dir.x, world_data.light_dir.y, world_data.light_dir.z);
 		glUniform3f(shader.uniform_loc.camera_pos, world_data.camera_pos.x, world_data.camera_pos.y, world_data.camera_pos.z);
-		glUniform1i(shader.uniform_loc.do_normal_map, do_normal_map);
+		glUniform1i(shader.uniform_loc.lighting_mode, lighting_mode);
 
 		glDrawElements(mode, entity.index_counts[i], GL_UNSIGNED_INT, (void*)0);
 	}
@@ -602,13 +607,15 @@ void make_texture(const char* texture_path, GLuint* texture, GLint internal_form
 		GLenum format = GL_RGBA;
 		if (comp == 3)
 			format = GL_RGB;
+		if (comp == 1)
+			format = GL_R;
 
 		glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, format, GL_UNSIGNED_BYTE, tex_data);
 
 	}
 }
 
-Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_path, const char* normal_texture_path, Float_32 import_scale)
+Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_path, const char* normal_texture_path, const char* parallex_texture_path, Float_32 import_scale)
 {
 
 	Entity entity;
@@ -630,6 +637,7 @@ Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_pa
 	// load texture
 	make_texture(diffuse_texture_path, &entity.texture_diffuse, GL_RGBA);
 	make_texture(normal_texture_path, &entity.texture_normal, GL_RGB);
+	make_texture(parallex_texture_path, &entity.texture_parallax, GL_RGB);
 
 	return entity;
 }
@@ -715,10 +723,11 @@ int main(int argc, char *args[])
 	Entity camera = make_camera();
 	//Entity sphere = make_gameobject("Asset/sphere.obj", "Asset/world.jpg", nullptr, 0.01f);
 	//sphere.position = { -0.05f, 0, 0 };
-	Entity cube = make_gameobject("Asset/plane.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", 0.05f);
-	//Entity cube = make_gameobject("Asset/cube.obj", "Asset/cube_diffuse.png", "Asset/cube_normal.png", 0.05f);
+	//Entity cube = make_gameobject("Asset/plane.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", 0.05f);
+	//Entity cube = make_gameobject("Asset/cube.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", "Asset/brickwall_disp.jpg", 0.05f);
+	Entity cube = make_gameobject("Asset/cube.obj", "Asset/bricks2.jpg", "Asset/bricks2_normal.jpg", "Asset/bricks2_disp.jpg", 0.05f);
 	cube.position = { 0,-0.01,0 };
-	cube.rotation = {-PI/2,0,0 };
+	cube.rotation = {0,-PI / 2,0 };
 	Entity light = make_light_entity();
 
 	SDL_Event game_event;
@@ -774,7 +783,17 @@ int main(int argc, char *args[])
 					break;
 					case SDLK_n:
 					{
-						do_normal_map = !do_normal_map;
+						lighting_mode = 1;
+					}
+					break;
+					case SDLK_p:
+					{
+						lighting_mode = 2;
+					}
+					break;
+					case SDLK_l:
+					{
+						lighting_mode = 0;
 					}
 					break;
 				}
@@ -834,7 +853,7 @@ int main(int argc, char *args[])
 		Mat4x4 cam_transform = get_transform(camera);
 		Vec3f cam_right = cam_transform[0];
 		Vec3f cam_up = cam_transform[2];
-		camera.position += (cam_right * right_move_factor + cam_up*up_move_factor)*delta_time;
+		camera.position += (cam_right * right_move_factor + cam_up*up_move_factor)*delta_time*0.05f;
 		Vec3f mouse_dir = { mouse_motion_y / (float)S_HEIGHT, mouse_motion_x / (float)S_WIDTH, 0 };
 		camera.rotation += mouse_dir*delta_time*100.f;
 		cam_transform = get_transform(camera);

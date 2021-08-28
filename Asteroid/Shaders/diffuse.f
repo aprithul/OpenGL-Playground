@@ -3,11 +3,15 @@
 uniform vec3 dir_light;
 uniform sampler2D tex2d;
 uniform sampler2D texNormal;
-uniform int do_normal_map;
+uniform sampler2D parallaxMap;
+uniform int lighting_mode;
+uniform vec3 camera_pos;
+
 in vec2 _uv;
 
 in vec3 _normal;
-
+in vec3 frag_pos_ts;
+in vec3 view_pos_ts;
 in vec3 _view_dir;
 in vec3 _light_dir;
 flat in mat3 TBN;
@@ -42,26 +46,39 @@ vec3 get_specular_light_phong(vec3 frag_normal)
 	return  specular_color * specular_light;
 }
 
+vec2 get_parallex_uv(vec3 view_dir, vec2 uv)
+{
+	float depth = texture(parallaxMap, uv).r;
+	vec2 offset = view_dir.xy*depth * 0.02;
+	return uv - offset;
+}
 
 void main()
 {
 	
-
-
 	vec3 frag_normal = normalize(_normal);
-	if(do_normal_map == 1)
-	{	
-		frag_normal = normalize(texture(texNormal, _uv).xyz * 2.0 - 1.0);
-		frag_normal = normalize(TBN * frag_normal);
+	vec2 texco = _uv;
+	
 
-		//frag_normal = model_v*frag_normal;
+	if(lighting_mode == 2)
+	{
+		vec3 view_dir_ts = normalize(transpose(TBN) * _view_dir);
+		texco =  get_parallex_uv(view_dir_ts, texco);
+		//float h = texture(parallaxMap, texco).r;
+		//frag_color = vec4(view_dir_ts*2-1,1);
+		//return;
+	}
+
+	if(lighting_mode >= 1)
+	{	
+		frag_normal = normalize(texture(texNormal, texco).xyz * 2.0 - 1.0);
+		frag_normal = normalize(TBN * frag_normal);
 	}
 	
 
 	vec3 ambient_color = vec3(1,1,1)*0.4f;
 	vec3 specular_color = get_specular_light_blinn_phong(frag_normal);
-	//vec3 specular_color = get_specular_light_phong();
 	vec3 diffuse_color = get_diffuse_light(frag_normal) + ambient_color; 
 
-	frag_color = texture(tex2d, _uv) * (vec4(diffuse_color,1) + vec4(specular_color,1));
+	frag_color = texture(tex2d, texco) * (vec4(diffuse_color,1));// + vec4(specular_color,1));
 }

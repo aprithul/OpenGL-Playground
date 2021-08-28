@@ -17,6 +17,7 @@ struct Entity
 	unsigned int vaos[MAX_VAOS] = {};
 	unsigned int texture_diffuse = 0;
 	unsigned int texture_normal = 0;
+	unsigned int texture_parallax = 0;
 };
 
 

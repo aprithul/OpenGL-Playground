@@ -11,7 +11,8 @@ uniform mat4 mvp;
 uniform vec3 camera_pos;
 out vec3 vert_color;
 out vec2 _uv;
-
+out vec3 frag_pos_ts;
+out vec3 view_pos_ts;
 out vec3 _normal;
 
 
@@ -31,8 +32,12 @@ void main()
 	vec3 _tangent = normalize( mat3(model) * tangent);
 
 	TBN = mat3(_tangent, _bitangent, _normal);
+	mat3 TBN_t = transpose(TBN);
 
 	gl_Position = mvp * vec4(position.xyz,1);
+	frag_pos_ts = TBN_t * vec3(model * vec4(position.xyz,1));
+	view_pos_ts = TBN_t * camera_pos;
+
 	_view_dir = normalize(camera_pos - vec3(model * vec4(position, 1)));
 	_light_dir = normalize(light_pos - vec3(model * vec4(position, 1)));
 	vert_color = color;
