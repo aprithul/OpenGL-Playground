@@ -93,6 +93,8 @@ typedef unsigned int uintptr_t;
 # endif
 #endif
 
+#define HAVE_LIBC
+
 /* This is disabled by default to avoid C runtime dependencies and manifest requirements */
 #ifdef HAVE_LIBC
 /* Useful headers */

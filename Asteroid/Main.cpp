@@ -9,7 +9,6 @@
 #include <assert.h>
 #include "Vertex.hpp"
 #include "Entity.hpp"
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
@@ -22,13 +21,22 @@
 #define GLEW_STATIC
 #include "glew.h"
 
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_opengl3.h"
+#include "SDL_opengl.h"
+
 #define S_WIDTH 1200
 #define S_HEIGHT 720
+
 
 struct WorldData
 {
 	Vec3f light_dir;
+	GLuint light_depth_map;
+	Mat4x4 light_view;
 	Vec3f camera_pos;
+	float bias;
 };
 
 struct UniformLoc
@@ -38,9 +46,12 @@ struct UniformLoc
 	GLint texture_diffuse = 0;
 	GLint texture_normal = 0;
 	GLint texture_parallax = 0;
+	GLint texture_shadow_depth = 0;
 	GLint light_dir = 0;
 	GLint camera_pos = 0;
 	GLint lighting_mode = 0;
+	GLint parallax_scale = 0;
+	GLint light_mvp = 0;
 	
 };
 
@@ -51,6 +62,7 @@ struct Shader
 	void load_uniform_locations()
 	{
 		uniform_loc.mvp = glGetUniformLocation(shader_program, "mvp");
+		uniform_loc.light_mvp = glGetUniformLocation(shader_program, "light_mvp");
 		uniform_loc.model = glGetUniformLocation(shader_program, "model");
 		uniform_loc.texture_diffuse = glGetUniformLocation(shader_program, "tex2d");
 		uniform_loc.texture_normal = glGetUniformLocation(shader_program, "texNormal");
@@ -58,6 +70,8 @@ struct Shader
 		uniform_loc.light_dir = glGetUniformLocation(shader_program, "dir_light");
 		uniform_loc.camera_pos = glGetUniformLocation(shader_program, "camera_pos");
 		uniform_loc.lighting_mode = glGetUniformLocation(shader_program, "lighting_mode");
+		uniform_loc.parallax_scale = glGetUniformLocation(shader_program, "parallax_scale");
+		uniform_loc.texture_shadow_depth = glGetUniformLocation(shader_program, "shadowDepthMap");
 	}
 };
 
@@ -115,6 +129,7 @@ int InitOpenglWindow()
 	glBlendFunc(1, 0);
 	glFrontFace(GL_CCW);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	//glEnable(GL_CULL_FACE);
 
 	printf("Vendor: %s\n", glGetString(GL_VENDOR));
@@ -164,11 +179,10 @@ void read_file(const char*  file_path, char* file_content)
 
 }
 
-GLuint LoadShaders(const char* vertex_path, const char* fragment_path)
+GLuint load_shaders(const char* vertex_path, const char* fragment_path)
 {
-
-	char vertex_shader[4096];
-	char fragment_shader[4096];
+	char vertex_shader[8192];
+	char fragment_shader[8192];
 
 	read_file(vertex_path, vertex_shader);
 	read_file(fragment_path, fragment_shader);
@@ -189,7 +203,7 @@ GLuint LoadShaders(const char* vertex_path, const char* fragment_path)
 		printf("%s\n", log_data);
 	}
 	else
-		printf("Vertex Shader compilation successful\n");
+		printf("Vertex Shader  %s : compilation successful\n", vertex_path);
 
 	GLuint f_shader = glCreateShader(GL_FRAGMENT_SHADER);
 	char* fs_p = &fragment_shader[0];
@@ -204,7 +218,7 @@ GLuint LoadShaders(const char* vertex_path, const char* fragment_path)
 		printf("%s\n", log_data);
 	}
 	else
-		printf("Fragment Shader compilation successful\n");
+		printf("Fragment Shader %s : compilation successful\n", fragment_path);
 
 	if (v_compile_result && f_compile_result)
 	{
@@ -230,6 +244,38 @@ GLuint LoadShaders(const char* vertex_path, const char* fragment_path)
 
 	return 0;
 
+}
+
+GLuint make_depth_framebuffer(int w, int h, GLuint* depth_texture)
+{
+	GLuint fbo = 0;
+	glGenFramebuffers(1, &fbo);
+
+	//GLuint fbo_depth_attachment;
+	glGenTextures(1, depth_texture);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	glBindTexture(GL_TEXTURE_2D, *depth_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, (void*)0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	//float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	//glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, *depth_texture, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	GLuint status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status == GL_FRAMEBUFFER_COMPLETE)
+		printf("Frame buffer successfully created\n");
+	else
+		printf("frame buffer creation failed");
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	return fbo;
 }
 
 GLuint make_frame_buffer()
@@ -342,7 +388,7 @@ void benchmark(int iterations)
 	Mat4x4 m1 = Mat4x4::Identity();
 	//Mat4x4 m2 = Mat4x4::Orthogrpahic(-1, 1, 5, 2, 6, 7);
 	Float_32 aspect_ratio = 0;
-	Mat4x4 m2 = Mat4x4::Perspective(90.f, 0.001, 100.f, aspect_ratio);
+	Mat4x4 m2 = Mat4x4::Perspective(90.f, 90.f, 0.001, 100.f, aspect_ratio);
 
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -359,7 +405,7 @@ void benchmark(int iterations)
 }
 
 int lighting_mode = 0;
-void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& projection, const Mat4x4& view, const Mat4x4& model, Shader& shader, GLenum mode=GL_LINE_LOOP)
+void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& projection, const Mat4x4& view, const Mat4x4& model, Shader& shader, GLfloat parallax_scale, GLenum mode=GL_LINE_LOOP)
 {
 	glUseProgram(shader.shader_program);
 	glActiveTexture(GL_TEXTURE0);
@@ -368,18 +414,26 @@ void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& proj
 	glBindTexture(GL_TEXTURE_2D, entity.texture_normal);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, entity.texture_parallax);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, world_data.light_depth_map);
 
 	for (int i = 0; i < entity.vao_count; i++)
 	{
 		glBindVertexArray(entity.vaos[i]);
 		glUniformMatrix4fv(shader.uniform_loc.model, 1, GL_FALSE, model.data);
 		glUniformMatrix4fv(shader.uniform_loc.mvp, 1, GL_FALSE, (projection*view*model).data);
+		glUniformMatrix4fv(shader.uniform_loc.light_mvp, 1, GL_FALSE, (world_data.light_view*model).data);
+
 		glUniform1i(shader.uniform_loc.texture_diffuse, 0);
 		glUniform1i(shader.uniform_loc.texture_normal, 1);
 		glUniform1i(shader.uniform_loc.texture_parallax, 2);
+		glUniform1i(shader.uniform_loc.texture_shadow_depth, 3);
 		glUniform3f(shader.uniform_loc.light_dir, world_data.light_dir.x, world_data.light_dir.y, world_data.light_dir.z);
 		glUniform3f(shader.uniform_loc.camera_pos, world_data.camera_pos.x, world_data.camera_pos.y, world_data.camera_pos.z);
 		glUniform1i(shader.uniform_loc.lighting_mode, lighting_mode);
+		glUniform1f(shader.uniform_loc.parallax_scale, parallax_scale);
+		GLuint loc = glGetUniformLocation(shader.shader_program, "bias");
+		glUniform1f( loc , world_data.bias);
 
 		glDrawElements(mode, entity.index_counts[i], GL_UNSIGNED_INT, (void*)0);
 	}
@@ -540,17 +594,18 @@ Entity make_space_ship()
 
 Entity make_light_entity()
 {
-	Float_32 scale = 0.1f;
+	Float_32 scale = 1;
+	Float_32 r = 0.7, g = 0.7, b = 0;
 	Vertex vertices[3] = {
-		{ 0.125f * scale, 0, 0.3f* scale, 1,1,1},
-		{ -0.125f* scale, 0, 0.3f* scale, 1,1,1},
-		{ 0, 0, 0, 0,0,1}
+		{ 0.125f * scale, 0, 0.3f* scale, r,g,b},
+		{ -0.125f* scale, 0, 0.3f* scale, r,g,b},
+		{ 0, 0, 0, 1,1,1}
 	};
 	int indices[3] = { 0,1,2 };
 	Entity light;
 	light.index_counts[0] = 3;
-	light.position = { 0,0.03,0 };
-	light.rotation = {0, 0, 0};// { PI / 2, 0, 0 };
+	light.position = { 0,2,0 };
+	light.rotation = {PI/2, 0, 0};// { PI / 2, 0, 0 };
 	make_mesh(vertices, indices, 3, 3, light.vaos[0], 2, false);
 	light.vao_count++;
 	return light;
@@ -575,7 +630,6 @@ Entity make_quad(GLuint texture)
 	quad.vao_count++;
 	return quad;
 }
-
 
 void make_texture(const char* texture_path, GLuint* texture, GLint internal_format)
 {
@@ -635,7 +689,7 @@ Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_pa
 	entity.rotation = { 0,0,0 };
 
 	// load texture
-	make_texture(diffuse_texture_path, &entity.texture_diffuse, GL_RGBA);
+	make_texture(diffuse_texture_path, &entity.texture_diffuse, GL_SRGB_ALPHA);
 	make_texture(normal_texture_path, &entity.texture_normal, GL_RGB);
 	make_texture(parallex_texture_path, &entity.texture_parallax, GL_RGB);
 
@@ -645,7 +699,7 @@ Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_pa
 Entity make_camera()
 {
 	Entity camera;
-	camera.position = { 0,0.1,-0.1 };
+	camera.position = { 0,2,-2 };
 	camera.rotation = { PI/4.f,0,0 };
 	return camera;
 }
@@ -674,24 +728,48 @@ Mat4x4 get_transform(Entity& ent)
 }
 
 
+void draw_gui(int* light_mode, float* bias)
+{
+	if (!ImGui::Begin("Control panel"))
+	{
+		// Early out if the window is collapsed, as an optimization.
+		ImGui::End();
+	}
+
+	ImGui::Text("Light Mode");
+	ImGui::SameLine();
+	const char* items[] = { "Unlit", "Lit", "Normal", "Parallax", "PCF shadow" };
+	ImGui::PushID(light_mode);
+	ImGui::Combo("", light_mode, items, IM_ARRAYSIZE(items));
+	ImGui::PopID();
+
+	ImGui::NewLine();
+	ImGui::Text("Shadow Bias");
+	ImGui::SameLine();
+	ImGui::PushID(bias);
+	ImGui::InputFloat("", bias, 0.0001f, 0.01f, "%0.5f");
+	ImGui::PopID();
+
+	//if (ImGui::BeginCombo("light_mode_combo", "0"))
+	//{
+	//	ImGui::EndCombo();
+	//}
+	//ImGui::EndCombo();
+
+
+	ImGui::End();
+}
+
 int main(int argc, char *args[])
 {
 
-	Vec3f pos1 = { 0,0,0 };
-	Vec3f pos2 = { -1,-1,0 };
-	Vec3f pos3 = { 1,1,0 };
-	Vec2f uv1 = { 0.5,0 };
-	Vec2f uv2 = { 0,1 };
-	Vec2f uv3 = { 1,1 };
-
-	Vec3f tangent = calculate_tangent_in_tangent_space(pos2, pos1, pos3, uv2, uv1, uv3);
-
-
 	Float_32 aspect_ratio = 0;
-	Mat4x4 projection = Mat4x4::Perspective(90, 0.001f, 10.f, aspect_ratio);
+	Mat4x4 projection = Mat4x4::Perspective(90, 60, 0.001f, 10.f, aspect_ratio);
 	static Vec2f cam_rot = {0,0};
 	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 
+
+	
 
 	//Mat4x4 projection = Mat4x4::Orthogrpahic(-2, 2, -2, 2, 10, -10);
 	bool is_game_running = true;
@@ -702,12 +780,41 @@ int main(int argc, char *args[])
 		return 0;
 	}
 
+
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
+	const char* glsl_version = "#version 330";
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	
+
+	// depth buffer to use in shadow mapping
+	GLuint depth_texture = 0;
+	int dim = 4096;
+	GLuint depth_buffer = make_depth_framebuffer(dim, dim, &depth_texture);
+
 	Shader shader_textured;
-	shader_textured.shader_program = LoadShaders("Shaders/diffuse.v", "Shaders/diffuse.f");
+	shader_textured.shader_program = load_shaders("Shaders/diffuse_shadow.v", "Shaders/diffuse_shadow.f");
 	shader_textured.load_uniform_locations();
 
+	Shader shader_shadow;
+	shader_shadow.shader_program = load_shaders("Shaders/shadow.v", "Shaders/shadow.f");
+	shader_shadow.load_uniform_locations();
+
+
 	Shader shader_shape;
-	shader_shape.shader_program = LoadShaders("Shaders/diffuse_line.v", "Shaders/diffuse_line.f");
+	shader_shape.shader_program = load_shaders("Shaders/diffuse_line.v", "Shaders/diffuse_line.f");
 	shader_shape.load_uniform_locations();
 
 
@@ -725,9 +832,15 @@ int main(int argc, char *args[])
 	//sphere.position = { -0.05f, 0, 0 };
 	//Entity cube = make_gameobject("Asset/plane.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", 0.05f);
 	//Entity cube = make_gameobject("Asset/cube.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", "Asset/brickwall_disp.jpg", 0.05f);
-	Entity cube = make_gameobject("Asset/cube.obj", "Asset/bricks2.jpg", "Asset/bricks2_normal.jpg", "Asset/bricks2_disp.jpg", 0.05f);
+	Entity cube = make_gameobject("Asset/cube_2.obj", "Asset/bricks2.jpg", "Asset/bricks2_normal.jpg", "Asset/bricks2_disp.jpg", 1.f);
 	cube.position = { 0,-0.01,0 };
-	cube.rotation = {0,-PI / 2,0 };
+	cube.rotation = {PI,0,0 };
+
+	Entity cube_small = make_gameobject("Asset/cube_2.obj", "Asset/bricks2.jpg", "Asset/bricks2_normal.jpg", "Asset/bricks2_disp.jpg", 0.1f);
+	cube_small.position = { 0,1.f,0 };
+	cube_small.rotation = { PI,0,0 };
+
+
 	Entity light = make_light_entity();
 
 	SDL_Event game_event;
@@ -736,16 +849,19 @@ int main(int argc, char *args[])
 	int forward_move_factor = 0;
 	int right_move_factor = 0;
 	int up_move_factor = 0;
-
+	bool if_ctrl_held = 0;
 	double last_time = SDL_GetTicks();
 	float delta_time = 0;
 	WorldData world_data;
+	world_data.light_depth_map = depth_texture;
+	world_data.bias = 0.0005f;
+	float parallax_scale = 0.02f;
 
 	while (is_game_running)
 	{
-		
 		Int_32 mouse_motion_x = 0;
 		Int_32 mouse_motion_y = 0;
+		
 		// handle inputs
 		while (SDL_PollEvent(&game_event))
 		{
@@ -781,19 +897,19 @@ int main(int argc, char *args[])
 						right_move_factor = 1;
 					}
 					break;
-					case SDLK_n:
+					case SDLK_1:
 					{
-						lighting_mode = 1;
+						parallax_scale += 0.015f;
 					}
 					break;
-					case SDLK_p:
+					case SDLK_2:
 					{
-						lighting_mode = 2;
+						parallax_scale -= 0.015f;
 					}
 					break;
-					case SDLK_l:
+					case SDLK_LCTRL:
 					{
-						lighting_mode = 0;
+						if_ctrl_held = true;
 					}
 					break;
 				}
@@ -816,13 +932,19 @@ int main(int argc, char *args[])
 						right_move_factor = 0;
 					}
 					break;
+					case SDLK_LCTRL:
+						if_ctrl_held = false;
+					break;
 				}
 			}
 			break;
 			case SDL_MOUSEMOTION:
 			{
-				mouse_motion_x = game_event.motion.xrel;
-				mouse_motion_y = game_event.motion.yrel;
+				if (if_ctrl_held)
+				{
+					mouse_motion_x = game_event.motion.xrel;
+					mouse_motion_y = game_event.motion.yrel;
+				}
 			}
 			break;
 			default:
@@ -832,28 +954,40 @@ int main(int argc, char *args[])
 
 		Float_32 light_rot_speed = 2.f;
 		if (keystate[SDL_SCANCODE_LEFT])
-			light.rotation.z -= light_rot_speed * delta_time;
+			light.rotation.y -= light_rot_speed * delta_time;
 		if (keystate[SDL_SCANCODE_RIGHT])
-			light.rotation.z += light_rot_speed * delta_time;
+			light.rotation.y += light_rot_speed * delta_time;
 		if (keystate[SDL_SCANCODE_UP])
 			light.rotation.x -= light_rot_speed * delta_time;
 		if (keystate[SDL_SCANCODE_DOWN])
 			light.rotation.x += light_rot_speed * delta_time;
+		if (keystate[SDL_SCANCODE_I])
+			light.position.y += delta_time;
+		if (keystate[SDL_SCANCODE_K])
+			light.position.y -= delta_time;
+
+		// end input
+
 
 		Mat4x4 light_transform = get_transform(light);
-
+		float ortho_dim = 10;
+		Float_32 light_aspect_ratio = 0;
+		//Mat4x4 light_proj = Mat4x4::Perspective(90,90, 0.1f, 1000.f, light_aspect_ratio);
+		Mat4x4 light_proj = Mat4x4::Orthogrpahic(-ortho_dim, ortho_dim, -ortho_dim, ortho_dim, 0, 10);
 		world_data.light_dir = light_transform[2]; // forward vector == 3rd column
 		world_data.light_dir.Normalize();
-
+		world_data.light_view = light_proj * light_transform.GetInverse();
 		// calculate entity transforms
 		//Mat4x4 sphere_transform = get_transform(sphere);
 		Mat4x4 cube_transform = get_transform(cube);
+		Mat4x4 cube_small_transform = get_transform(cube_small);
+
 
 		// Set camera position and orientation
 		Mat4x4 cam_transform = get_transform(camera);
 		Vec3f cam_right = cam_transform[0];
 		Vec3f cam_up = cam_transform[2];
-		camera.position += (cam_right * right_move_factor + cam_up*up_move_factor)*delta_time*0.05f;
+		camera.position += (cam_right * right_move_factor + cam_up*up_move_factor)*delta_time;
 		Vec3f mouse_dir = { mouse_motion_y / (float)S_HEIGHT, mouse_motion_x / (float)S_WIDTH, 0 };
 		camera.rotation += mouse_dir*delta_time*100.f;
 		cam_transform = get_transform(camera);
@@ -861,31 +995,46 @@ int main(int argc, char *args[])
 
 
 		// render
+		// shadow depth pass
+
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+		
+		//ImGui::ShowDemoWindow();
+		draw_gui(&lighting_mode, &world_data.bias);
+		
+
+
+		glViewport(0, 0, dim, dim);
+		glBindFramebuffer(GL_FRAMEBUFFER, depth_buffer);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		draw_entity(cube, world_data, light_proj, light_transform.GetInverse(), cube_transform, shader_shadow, parallax_scale, GL_TRIANGLES);
+		draw_entity(cube_small, world_data, light_proj, light_transform.GetInverse(), cube_small_transform, shader_shadow, parallax_scale, GL_TRIANGLES);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+		// color pass
+		glViewport(0, 0, S_WIDTH, S_HEIGHT);
 		glClearColor(0.3f, 0.3f, 0.3f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//draw_entity(sphere, world_data, projection, cam_transform.GetInverse(), sphere_transform, shader, GL_TRIANGLES);
-		draw_entity(cube, world_data, projection, cam_transform.GetInverse(), cube_transform, shader_textured, GL_TRIANGLES);
-		draw_entity(light, world_data, projection, cam_transform.GetInverse(), light_transform, shader_shape, GL_TRIANGLES);
+		draw_entity(cube, world_data, projection, cam_transform.GetInverse(), cube_transform, shader_textured, parallax_scale, GL_TRIANGLES);
+		draw_entity(cube_small, world_data, projection, cam_transform.GetInverse(), cube_small_transform, shader_textured, parallax_scale, GL_TRIANGLES);
+		draw_entity(light, world_data, projection, cam_transform.GetInverse(), light_transform, shader_shape, 0, GL_TRIANGLES);
 
 
-		//glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-		/*if (render_to_quad)
-		{
 
-		}
-		else
-		{
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+		ImGui::Render();
 
-			Int_32 sw = 0;
-			Int_32 sh = 0;
-			SDL_GetWindowSize(window, &sw, &sh);
 
-			glBlitFramebuffer(0, 0, 640, 640, 0, 0, sw, sh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-		}*/
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		
+
 		SDL_GL_SwapWindow(window);
 
 		delta_time = (SDL_GetTicks() - last_time) / 1000.f;
@@ -893,5 +1042,9 @@ int main(int argc, char *args[])
 
 	}
 
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+	 
 	return 0;
 }

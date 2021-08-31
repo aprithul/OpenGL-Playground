@@ -83,7 +83,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\imgui\backends;D:\FromScratch\Asteroid\Vendor\imgui;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
@@ -114,7 +114,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\imgui\backends;D:\FromScratch\Asteroid\Vendor\imgui;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
@@ -143,9 +143,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Vendor\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\Vendor\imgui\backends\imgui_impl_sdl.cpp" />
+    <ClCompile Include="..\Vendor\imgui\imgui.cpp" />
+    <ClCompile Include="..\Vendor\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\Vendor\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Vendor\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\Vendor\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Vendor\imgui-master\imgui.h" />
     <ClInclude Include="Entity.hpp" />
     <ClInclude Include="MathUtil.hpp" />
     <ClInclude Include="Rigidbody.hpp" />
@@ -158,6 +166,10 @@
     <None Include="Shaders\diffuse.v" />
     <None Include="Shaders\diffuse_line.f" />
     <None Include="Shaders\diffuse_line.v" />
+    <None Include="Shaders\diffuse_shadow.f" />
+    <None Include="Shaders\diffuse_shadow.v" />
+    <None Include="Shaders\shadow.f" />
+    <None Include="Shaders\shadow.v" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

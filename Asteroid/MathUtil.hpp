@@ -169,7 +169,7 @@ struct Mat4x4
 	Float_32& operator()(Uint_32 row, Uint_32 col);
 
 	static Mat4x4 Orthogrpahic(Float_32 _left, Float_32 _right, Float_32 _bottom, Float_32 _top, Float_32 _near, Float_32 _far);
-	static Mat4x4 Perspective(Float_32 fov, Float_32 near, Float_32 far, Float_32& aspect_ratio);
+	static Mat4x4 Perspective(Float_32 fov_h, Float_32 fov_v, Float_32 near, Float_32 far, Float_32& aspect_ratio);
 	static Mat4x4 Identity();
 };
 
@@ -1199,18 +1199,18 @@ Mat4x4 Mat4x4::Identity()
 Mat4x4 Mat4x4::Orthogrpahic(Float_32 _left, Float_32 _right, Float_32 _bottom, Float_32 _top, Float_32 _near, Float_32 _far)
 {
 
-	return Mat4x4{ 2.f / (_right - _left),		0,	0,	-(_right + _left) / (_right - _left),
-					0,	2.f / (_top - _bottom),	0, -(_top + _bottom) / (_top - _bottom),
-					0,	0,	-2.f / (_far - _near),	-(_far + _near) / (_far - _near),
+	return Mat4x4{ 2.f / (_right - _left),		0,	0,	0,
+					0,	2.f / (_top - _bottom),	0, 0,
+					0,	0,	1.f / (_far - _near), 0,
 					0,	0,	0,	1 };
 }
 
-Mat4x4 Mat4x4::Perspective(Float_32 fov, Float_32 near, Float_32 far, Float_32& aspect_ratio)
+Mat4x4 Mat4x4::Perspective(Float_32 fov_h, Float_32 fov_v, Float_32 near, Float_32 far, Float_32& aspect_ratio)
 {
 	// distance to projection plane
-	Float_32 g = 1.f / tanf(60.f*DEG_TO_RAD/2.f); // vertical fov is fixed 60.0 degrees
+	Float_32 g = 1.f / tanf(fov_v*DEG_TO_RAD/2.f); // vertical fov is fixed 60.0 degrees
 	// aspect ratio
-	aspect_ratio = tanf(fov*DEG_TO_RAD / 2.f) * g;
+	aspect_ratio = tanf(fov_h*DEG_TO_RAD / 2.f) * g;
 
 	return Mat4x4{ g / aspect_ratio,	0,	0,	0,
 					0,	g,	0,	0,
