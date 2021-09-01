@@ -7,23 +7,22 @@
 #include <xmmintrin.h>
 #endif
 
-#define DEF_STATIC static
+#define DEF_STATIC
 
 #define DEG_TO_RAD PI/180.f
 #define PI 3.14159265
 #define EPS 0.000001	// very small value
 
-// may need to redef depending on compiler
-typedef int Int_32;
-typedef unsigned int Uint_32;
-typedef float Float_32;
+#include "Platform.hpp"
+
 ///////////////////////////////////
 
 struct Vec2f;
 struct Vec3f;
 struct Vec4f;
+struct Mat4x4; 
 struct Mat3x3;
-struct Mat4x4;
+
 
 struct Vec2f
 {

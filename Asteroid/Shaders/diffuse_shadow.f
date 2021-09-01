@@ -1,52 +1,60 @@
 #version 330 core
 
-uniform vec3 dir_light;
 uniform sampler2D tex2d;
 uniform sampler2D texNormal;
 uniform sampler2D parallaxMap;
 uniform sampler2D shadowDepthMap;
+uniform sampler2D specularMap;
 uniform int lighting_mode;
 uniform vec3 camera_pos;
 uniform float parallax_scale;
 uniform float bias;
 
+in vec3 vert_color;
 in vec2 _uv;
-in vec4 light_space_position;
-in vec3 _normal;
 in vec3 frag_pos_ts;
 in vec3 view_pos_ts;
-in vec3 _view_dir;
-flat in mat3 TBN;
+in vec3 _normal;
+in vec4 light_space_position;
+in vec3 dir_light_ts;
+in vec3 dir_view_ts;
+in vec3 dir_light_ws;
+in vec3 dir_view_ws;
 
-in vec3 vert_color;
 out vec4 frag_color;
 
-vec3 get_diffuse_light(vec3 frag_normal)
+//flat in mat3 TBN;
+
+//in vec3 vert_color;
+
+vec3 get_diffuse_light(vec3 frag_normal, vec3 light_direction)
 {
 	vec3 light_color = vec3(0.4,0.4,0.4);
 	float diffuse_strength = 2.f;
-	return clamp( dot(frag_normal, -dir_light), 0, 1.0) * diffuse_strength * light_color;// dir_light is from light position towards object
+	return clamp( dot(frag_normal, light_direction), 0, 1.0) * diffuse_strength * light_color;// dir_light_ts is  from object to light position
 }
 
-vec3 get_specular_light_blinn_phong(vec3 frag_normal)
+vec3 get_specular_light_blinn_phong(vec3 frag_normal, vec3 light_direction, vec3 view_direction, vec2 _uv)
 {
-	vec3 half_vec = normalize( -dir_light + _view_dir);
+	vec3 half_vec = normalize( light_direction + view_direction);
 	
-	float specular_power = 300.f;
-	float specular_light = clamp(pow(clamp(dot(normalize(_normal), half_vec), 0, 1.0),specular_power),0,1.0) ;
+	float specular_power = 200.f;
+	float specular_light = clamp(pow(clamp(dot(normalize(frag_normal), half_vec), 0, 1.0),specular_power),0,1.0) * texture(specularMap,_uv).r;
 	vec3 specular_color = vec3(1,1,1);
-	return  specular_color * specular_light * float( dot(normalize(_normal),-dir_light) > 0.0);
+	return  specular_color * specular_light * float( dot(normalize(frag_normal),light_direction) > 0.0);
 }
 
-
+/*
 vec3 get_specular_light_phong(vec3 frag_normal)
 {
-	vec3 reflection_dir = normalize(reflect(dir_light, frag_normal));
+
+	vec3 reflection_dir = normalize(reflect(dir_light_ts, frag_normal));
 	float specular_power = 40.f;
-	float specular_light = pow(clamp(dot(reflection_dir, _view_dir), 0, 1.0),specular_power) ;
+	float specular_light = pow(clamp(dot(reflection_dir, view_dir_ts), 0, 1.0),specular_power) ;
 	vec3 specular_color = vec3(1,1,1);
 	return  specular_color * specular_light;
 }
+*/
 
 vec2 get_parallex_steep(vec3 viewDir, vec2 texCoords)
 {
@@ -55,7 +63,7 @@ vec2 get_parallex_steep(vec3 viewDir, vec2 texCoords)
 	const int minLayer = 16;
 	const int maxLayer = 64;
 	const vec3 n = vec3(0,0,1);
-	float t = max(dot(viewDir, n), 0);
+	float t = max(dot(dir_view_ws, n), 0);
     int numLayers = 20;//int(minLayer*t+ maxLayer*(1.0 - t));
     // calculate the size of each layer
     float layerDepth = 1.0 / numLayers;
@@ -105,7 +113,6 @@ float get_shadow_factor()
 {
 	vec3 proj_texco = light_space_position.xyz / light_space_position.w;
 	proj_texco = light_space_position.xyz*0.5+0.5;
-	//float _bias =  max(dot(_normal, -dir_light) * bias,0);
 	float texel_size = 1.f/textureSize(shadowDepthMap,0).x;
 	int samples = 3; // 3x3
 
@@ -127,6 +134,8 @@ void main()
 {
 	
 	vec3 frag_normal = normalize(_normal);
+	vec3 light_direction = dir_light_ws;
+	vec3 view_direction = dir_view_ws;
 	vec2 texco = _uv;
 	vec3 ambient_color = vec3(0,0,0);
 	vec3 specular_color = vec3(0,0,0);
@@ -143,22 +152,25 @@ void main()
 
 	if(lighting_mode >= 3)
 	{
-		vec3 view_dir_ts = normalize(view_pos_ts - frag_pos_ts);
-		texco =  get_parallex_steep(view_dir_ts, texco);
+		texco =  get_parallex_steep(dir_view_ts, texco);
 	}
 
 	if(lighting_mode >= 2)
 	{	
-		frag_normal = normalize(texture(texNormal, texco).xyz * 2.0 - 1.0);
-		frag_normal = normalize(TBN * frag_normal);
+		frag_normal = normalize(normalize(texture(texNormal, texco).xyz) * 2.0 - 1.0);
+		light_direction = dir_light_ts;
+		view_direction = dir_view_ts;
+		//frag_normal = normalize(TBN * frag_normal);
 	}
 
 	if(lighting_mode >= 1 )
 	{
-		ambient_color = vec3(1,1,1)*0.4f;
-		specular_color = get_specular_light_blinn_phong(frag_normal);
-		diffuse_color = get_diffuse_light(frag_normal) + ambient_color; 
+		ambient_color = vec3(1,1,1)*0.2f;
+		specular_color = get_specular_light_blinn_phong(frag_normal, light_direction, view_direction, texco);
+		diffuse_color = get_diffuse_light(frag_normal, light_direction) + ambient_color; 
 	}
-
-	frag_color = texture(tex2d, texco) * shadow_factor * (vec4(diffuse_color,1) + vec4(specular_color,1));
+	
+	vec4 sampled_color = texture(tex2d, texco);
+	//vec4 sampled_color = vec4(0,0,0.5,1);
+	frag_color = sampled_color * shadow_factor * (vec4(diffuse_color,1) + vec4(specular_color,1));
 }
