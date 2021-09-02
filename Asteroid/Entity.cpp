@@ -35,31 +35,31 @@ Entity make_light_entity()
 	Entity light;
 	light.index_counts[0] = 3;
 	light.position = { 0,2,0 };
-	light.rotation = { PI / 2, 0, 0 };// { PI / 2, 0, 0 };
+	light.rotation = { PI / 4, 0, 0 };// { PI / 2, 0, 0 };
 	make_mesh(vertices, indices, 3, 3, light.vaos[0], 2, false);
 	light.vao_count++;
 	return light;
 }
 
-//Entity make_quad(GLuint texture)
-//{
-//	Vertex vertices[4] = {
-//	{ 1, 1, 0, 0,0,1,0,0,1,1,1},
-//	{ -1, 1, 0, 0,0,1,0,0,1,-1,1},
-//	{ -1, -1, 0, 0,0,1,0,0,1,-1,-1},
-//	{ 1, -1, 0, 0,0,1,1,0,0,1,-1}
-//	};
-//	int indices[6] = { 0,1,2,0,2,3 };
-//	Entity quad;
-//	quad.index_counts[0] = 6;
-//	quad.position = { 0,0,0 };
-//	quad.rotation = { 0,0,0 };
-//	quad.angular_speed = 1.0f;
-//	quad.texture_diffuse = texture;
-//	make_mesh(vertices, indices, 4, 6, quad.vaos[0], 4, true);
-//	quad.vao_count++;
-//	return quad;
-//}
+Entity make_quad()
+{
+	Vertex vertices[4] = {
+	{ 1, 1, 0, 0,0,1,0,0,1,1,1},
+	{ -1, 1, 0, 0,0,1,0,0,1,-1,1},
+	{ -1, -1, 0, 0,0,1,0,0,1,-1,-1},
+	{ 1, -1, 0, 0,0,1,1,0,0,1,-1}
+	};
+	int indices[6] = { 0,1,2,0,2,3 };
+	Entity quad;
+	quad.index_counts[0] = 6;
+	quad.position = { 0,0,0 };
+	quad.rotation = { 0,0,0 };
+	quad.angular_speed = 1.0f;
+	quad.texture_diffuse = 0;
+	make_mesh(vertices, indices, 4, 6, quad.vaos[0], 4, true);
+	quad.vao_count++;
+	return quad;
+}
 
 
 Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_path, const char* normal_texture_path, const char* parallex_texture_path, const char* specular_texture_path, bool flip, Float_32 import_scale)

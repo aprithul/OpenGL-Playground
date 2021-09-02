@@ -123,6 +123,7 @@ int main(int argc, char *args[])
 	Entity cyborg = make_gameobject("Asset/cyborg.obj", "Asset/cyborg_diffuse.png", "Asset/cyborg_normal.png", nullptr, "Asset/cyborg_specular.png", true, 0.4f);
 	cyborg.position = { 0,0.f,0 };
 	cyborg.rotation = { 0,PI,0 };
+	
 
 
 	Entity light = make_light_entity();
@@ -139,7 +140,9 @@ int main(int argc, char *args[])
 	WorldData world_data;
 	world_data.light_depth_map = depth_texture;
 	world_data.bias = 0.0005f;
-	world_data.lighting_mode = 4;
+	world_data.lighting_mode = 0;
+	world_data.shadow_mode = 0;
+
 	float parallax_scale = 0.02f;
 
 	while (is_game_running)
@@ -241,7 +244,7 @@ int main(int argc, char *args[])
 			}
 		}
 
-		Float_32 light_rot_speed = 2.f;
+		Float_32 light_rot_speed = 1.f;
 		if (keystate[SDL_SCANCODE_LEFT])
 			light.rotation.y -= light_rot_speed * delta_time;
 		if (keystate[SDL_SCANCODE_RIGHT])
@@ -257,12 +260,13 @@ int main(int argc, char *args[])
 
 		// end input
 
+		light.rotation.y -= light_rot_speed * delta_time;
 
 		Mat4x4 light_transform = get_transform(light);
 		float ortho_dim = 10;
 		Float_32 light_aspect_ratio = 0;
 		//Mat4x4 light_proj = Mat4x4::Perspective(90,90, 0.1f, 1000.f, light_aspect_ratio);
-		Mat4x4 light_proj = Mat4x4::Orthogrpahic(-ortho_dim, ortho_dim, -ortho_dim, ortho_dim, 0, 10);
+		Mat4x4 light_proj = Mat4x4::Orthogrpahic(-ortho_dim, ortho_dim, -ortho_dim, ortho_dim, 0, 5);
 		world_data.light_dir = light_transform[2]; // forward vector == 3rd column
 		world_data.light_dir.Normalize();
 		world_data.light_view = light_proj * light_transform.GetInverse();
@@ -292,7 +296,7 @@ int main(int argc, char *args[])
 		ImGui::NewFrame();
 		
 		//ImGui::ShowDemoWindow();
-		draw_gui(&world_data.lighting_mode, &world_data.bias, &parallax_scale);
+		draw_gui(&world_data.lighting_mode, &world_data.shadow_mode, &world_data.bias, &parallax_scale);
 		
 
 

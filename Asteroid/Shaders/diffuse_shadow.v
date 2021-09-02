@@ -46,7 +46,7 @@ void main()
 	//view_pos_ts = TBN_t * camera_pos;
 	dir_light_ws = -dir_light;
 	dir_light_ts = TBN_t * dir_light_ws;
-	dir_view_ws = normalize(camera_pos - gl_Position.xyz);
+	dir_view_ws = normalize(camera_pos - (model * vec4(position.xyz,1)).xyz);
 	dir_view_ts = TBN_t * dir_view_ws;
 	vert_color = color;
 }

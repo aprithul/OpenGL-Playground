@@ -309,8 +309,10 @@ void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& proj
 		glUniform3f(shader.uniform_loc.camera_pos, world_data.camera_pos.x, world_data.camera_pos.y, world_data.camera_pos.z);
 		glUniform1i(shader.uniform_loc.lighting_mode, world_data.lighting_mode);
 		glUniform1f(shader.uniform_loc.parallax_scale, parallax_scale);
-		GLuint loc = glGetUniformLocation(shader.shader_program, "bias");
-		glUniform1f(loc, world_data.bias);
+		GLuint loc_bias = glGetUniformLocation(shader.shader_program, "bias");
+		glUniform1f(loc_bias, world_data.bias);
+		GLuint loc_shadow_mode = glGetUniformLocation(shader.shader_program, "shadow_mode");
+		glUniform1i(loc_shadow_mode, world_data.shadow_mode);
 
 		glDrawElements(mode, entity.index_counts[i], GL_UNSIGNED_INT, (void*)0);
 	}

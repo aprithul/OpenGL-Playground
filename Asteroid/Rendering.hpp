@@ -17,6 +17,7 @@ struct WorldData
 	Vec3f camera_pos;
 	float bias;
 	int lighting_mode;
+	int shadow_mode;
 };
 
 struct UniformLoc

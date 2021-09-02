@@ -18,7 +18,7 @@ void init_gui(SDL_Window* window, SDL_GLContext gl_context )
 	ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 }
-void draw_gui(int* light_mode, float* bias, float* parallax_scale)
+void draw_gui(int* light_mode, int* shadow_mode, float* bias, float* parallax_scale)
 {
 	if (!ImGui::Begin("Control panel"))
 	{
@@ -26,11 +26,20 @@ void draw_gui(int* light_mode, float* bias, float* parallax_scale)
 		ImGui::End();
 	}
 
+	ImGui::PushItemWidth(-1);
 	ImGui::Text("Light Mode");
 	ImGui::SameLine();
-	const char* items[] = { "Unlit", "Lit", "Normal", "Parallax", "PCF shadow" };
+	const char* light_modes[] = { "Unlit", "Lit", "Normal", "Parallax", "PCF shadow" };
 	ImGui::PushID(light_mode);
-	ImGui::Combo("", light_mode, items, IM_ARRAYSIZE(items));
+	ImGui::Combo("", light_mode, light_modes, IM_ARRAYSIZE(light_modes));
+	ImGui::PopID();
+	
+	ImGui::NewLine();
+	ImGui::Text("Shadow");
+	ImGui::SameLine();
+	const char* shadow_modes[] = { "Off", "Hard Shadow", "Soft Shadow", "PCSS"};
+	ImGui::PushID(shadow_mode);
+	ImGui::Combo("", shadow_mode, shadow_modes, IM_ARRAYSIZE(shadow_modes));
 	ImGui::PopID();
 
 	ImGui::NewLine();
@@ -46,7 +55,7 @@ void draw_gui(int* light_mode, float* bias, float* parallax_scale)
 	ImGui::PushID(parallax_scale);
 	ImGui::InputFloat("", parallax_scale, 0.01f, 0.01f, "%0.5f");
 	ImGui::PopID();
-
+	ImGui::PopItemWidth();
 	//if (ImGui::BeginCombo("light_mode_combo", "0"))
 	//{
 	//	ImGui::EndCombo();

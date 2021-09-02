@@ -9,6 +9,7 @@ uniform int lighting_mode;
 uniform vec3 camera_pos;
 uniform float parallax_scale;
 uniform float bias;
+uniform int shadow_mode;
 
 in vec3 vert_color;
 in vec2 _uv;
@@ -63,7 +64,7 @@ vec2 get_parallex_steep(vec3 viewDir, vec2 texCoords)
 	const int minLayer = 16;
 	const int maxLayer = 64;
 	const vec3 n = vec3(0,0,1);
-	float t = max(dot(dir_view_ws, n), 0);
+	//float t = max(dot(viewDir, n), 0);
     int numLayers = 20;//int(minLayer*t+ maxLayer*(1.0 - t));
     // calculate the size of each layer
     float layerDepth = 1.0 / numLayers;
@@ -94,7 +95,7 @@ vec2 get_parallex_steep(vec3 viewDir, vec2 texCoords)
 	float preDif = texture(parallaxMap, prevTexCoord).r - currentLayerDepth + layerDepth;
 	// interpolation weight. The higher postDif is a part of the total dif, 
 	// the more we move towards previous texCords. and vice versa
-	t = postDif / (postDif - preDif); 
+	float t = postDif / (postDif - preDif); 
 	
 	currentTexCoords = currentTexCoords*(1.0-t) + (prevTexCoord)*t;
 
@@ -109,12 +110,65 @@ vec2 get_parallex(vec3 viewDir, vec2 texCoords)
 	return texCoords - offset;
 }
 
+float get_penumbra_size(float light_width)
+{
+	vec3 proj_texco = light_space_position.xyz / light_space_position.w;
+	proj_texco = light_space_position.xyz*0.5+0.5;
+	float texel_size = 1.f/textureSize(shadowDepthMap,0).x;
+	int samples = 33;
+
+	float half_dim = (samples*texel_size)/2.f;
+	float depth_total = 0;
+	float depth_count = 0;
+	for(int x = -samples/2; x <= samples/2; x++)
+	{
+		for(int y = -samples/2; y <= samples/2; y++)
+		{
+			float _depth = texture(shadowDepthMap, proj_texco.xy + (vec2(x,y)*texel_size)).r;
+
+			if(_depth < proj_texco.z-0.005f)
+			{
+				depth_total += _depth;
+				depth_count++;
+			}
+		}
+	}
+	
+	//return texture(shadowDepthMap, proj_texco.xy).r / proj_texco.z;
+	
+	if(depth_count == 0)
+		return 0;
+
+	float avg_distance = depth_total / depth_count;
+	return (proj_texco.z - avg_distance)/avg_distance;
+	//return penumbra;
+}
+
 float get_shadow_factor()
 {
 	vec3 proj_texco = light_space_position.xyz / light_space_position.w;
 	proj_texco = light_space_position.xyz*0.5+0.5;
 	float texel_size = 1.f/textureSize(shadowDepthMap,0).x;
-	int samples = 3; // 3x3
+
+	//float shadow = min( pow(proj_texco.z,7),1.f);
+	float penumbra = get_penumbra_size(1);
+	
+	if(shadow_mode == 0) // no shadow
+		return 0;
+
+	int samples = 0;
+	if(shadow_mode == 1) // hard shadow
+		samples = 1;	
+	else if(shadow_mode == 2) // soft shadow
+		samples = 7;	
+	else if(shadow_mode == 3) // PCSS shadow
+	{
+		samples = 1 + int(penumbra*33);
+		if(samples%2==0)	// even number of samples cause artifact
+			samples+=1;
+	}
+	
+	
 
 	float half_dim = (samples*texel_size)/2.f;
 	float shadow_total = 0;
@@ -122,13 +176,15 @@ float get_shadow_factor()
 	{
 		for(int y = -samples/2; y <= samples/2; y++)
 		{
+
 			float _depth = texture(shadowDepthMap, proj_texco.xy + (vec2(x,y)*texel_size)).r;
-			shadow_total += _depth + max(bias,0) < proj_texco.z?1:0;
+			shadow_total += _depth + max(bias,0) < proj_texco.z ? 1 :0;
 		}
 	}
 	
 	return shadow_total / (samples*samples);
 }
+
 
 void main()
 {
@@ -144,15 +200,17 @@ void main()
 	float shadow_factor = 1;
 
 
-	if(lighting_mode >=4)
-	{
-		shadow_strength = 0.75f;
-		shadow_factor = 1.f - (get_shadow_factor()*shadow_strength);
-	}
+	//if(lighting_mode >=4)
+	//{
+	shadow_strength = 0.75f;
+	shadow_factor = 1.f - ((get_shadow_factor())*shadow_strength);
+	//}
 
 	if(lighting_mode >= 3)
 	{
-		texco =  get_parallex_steep(dir_view_ts, texco);
+		light_direction = dir_light_ts;
+		view_direction = dir_view_ts;
+		texco =  get_parallex_steep(view_direction, texco);
 	}
 
 	if(lighting_mode >= 2)
@@ -165,12 +223,12 @@ void main()
 
 	if(lighting_mode >= 1 )
 	{
-		ambient_color = vec3(1,1,1)*0.2f;
+		ambient_color = vec3(1,1,1)*0.4f;
 		specular_color = get_specular_light_blinn_phong(frag_normal, light_direction, view_direction, texco);
 		diffuse_color = get_diffuse_light(frag_normal, light_direction) + ambient_color; 
 	}
 	
 	vec4 sampled_color = texture(tex2d, texco);
-	//vec4 sampled_color = vec4(0,0,0.5,1);
+	//vec4 sampled_color = vec4(p,p,p,1);
 	frag_color = sampled_color * shadow_factor * (vec4(diffuse_color,1) + vec4(specular_color,1));
 }

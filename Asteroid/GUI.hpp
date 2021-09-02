@@ -9,7 +9,7 @@
 
 
 void init_gui(SDL_Window* window, SDL_GLContext gl_context);
-void draw_gui(int* light_mode, float* bias, float* parallax_scale);
+void draw_gui(int* light_mode, int* shadow_mode, float* bias, float* parallax_scale);
 void cleanup_gui();
 
 #endif // !GUI_HPP
