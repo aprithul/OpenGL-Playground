@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\FromScratch\Asteroid\Vendor\ASSIMP\CMakeFiles\3e5aebcaed922578ba9f88d844a2b32c\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{9CC973B0-4C2A-3F26-BAFF-05AD72E51AC5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

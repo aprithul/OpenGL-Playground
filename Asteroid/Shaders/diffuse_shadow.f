@@ -45,18 +45,6 @@ vec3 get_specular_light_blinn_phong(vec3 frag_normal, vec3 light_direction, vec3
 	return  specular_color * specular_light * float( dot(normalize(frag_normal),light_direction) > 0.0);
 }
 
-/*
-vec3 get_specular_light_phong(vec3 frag_normal)
-{
-
-	vec3 reflection_dir = normalize(reflect(dir_light_ts, frag_normal));
-	float specular_power = 40.f;
-	float specular_light = pow(clamp(dot(reflection_dir, view_dir_ts), 0, 1.0),specular_power) ;
-	vec3 specular_color = vec3(1,1,1);
-	return  specular_color * specular_light;
-}
-*/
-
 vec2 get_parallex_steep(vec3 viewDir, vec2 texCoords)
 {
 	// steep parallax
@@ -102,14 +90,6 @@ vec2 get_parallex_steep(vec3 viewDir, vec2 texCoords)
 	return currentTexCoords;
 }
 
-vec2 get_parallex(vec3 viewDir, vec2 texCoords)
-{
-	//simple parallax
-	float depth = texture(parallaxMap, texCoords).r;
-	vec2 offset = viewDir.xy*depth * parallax_scale;
-	return texCoords - offset;
-}
-
 float get_penumbra_size(float light_width)
 {
 	vec3 proj_texco = light_space_position.xyz / light_space_position.w;
@@ -144,13 +124,20 @@ float get_penumbra_size(float light_width)
 	//return penumbra;
 }
 
+vec3 get_proj()
+{
+	vec3 proj_texco = light_space_position.xyz;// / light_space_position.w;
+	proj_texco = light_space_position.xyz*0.5+0.5;
+	float _depth = pow(texture(shadowDepthMap, proj_texco.xy).r,15);
+	return vec3(_depth,_depth,_depth);
+}
+
 float get_shadow_factor()
 {
-	vec3 proj_texco = light_space_position.xyz / light_space_position.w;
-	proj_texco = light_space_position.xyz*0.5+0.5;
+	
+	vec3 proj_texco = light_space_position.xyz/ light_space_position.w;
+	proj_texco = proj_texco.xyz*0.5+0.5;
 	float texel_size = 1.f/textureSize(shadowDepthMap,0).x;
-
-	//float shadow = min( pow(proj_texco.z,7),1.f);
 	float penumbra = get_penumbra_size(1);
 	
 	if(shadow_mode == 0) // no shadow
@@ -158,7 +145,11 @@ float get_shadow_factor()
 
 	int samples = 0;
 	if(shadow_mode == 1) // hard shadow
-		samples = 1;	
+	{
+		samples = 1;
+		float _depth = texture(shadowDepthMap, proj_texco.xy).r;
+		return _depth + max(bias,0) < proj_texco.z ? 1 :0;
+	}
 	else if(shadow_mode == 2) // soft shadow
 		samples = 7;	
 	else if(shadow_mode == 3) // PCSS shadow
@@ -167,8 +158,6 @@ float get_shadow_factor()
 		if(samples%2==0)	// even number of samples cause artifact
 			samples+=1;
 	}
-	
-	
 
 	float half_dim = (samples*texel_size)/2.f;
 	float shadow_total = 0;
@@ -186,12 +175,42 @@ float get_shadow_factor()
 }
 
 
+float ShadowCalculation(vec4 fragPosLightSpace)
+{
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords = projCoords * 0.5 + 0.5;
+
+	float pcfDepth = texture(shadowDepthMap, projCoords.xy).r; 
+    float shadow = projCoords.z - bias > pcfDepth  ? 1.0 : 0.0;        
+	return shadow;
+
+	//return projCoords.z;
+    float closestDepth = texture(shadowDepthMap, projCoords.xy).r; 
+    float currentDepth = projCoords.z;
+
+    shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(shadowDepthMap, 0);
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(shadowDepthMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;        
+        }    
+    }
+    shadow /= 9.0;
+    if(projCoords.z > 1.0)
+        shadow = 0.0;
+        
+    return shadow;
+}
+
 void main()
 {
 	
 	vec3 frag_normal = normalize(_normal);
-	vec3 light_direction = dir_light_ws;
-	vec3 view_direction = dir_view_ws;
+	vec3 light_direction = normalize(dir_light_ws);
+	vec3 view_direction = normalize(dir_view_ws);
 	vec2 texco = _uv;
 	vec3 ambient_color = vec3(0,0,0);
 	vec3 specular_color = vec3(0,0,0);
@@ -228,7 +247,13 @@ void main()
 		diffuse_color = get_diffuse_light(frag_normal, light_direction) + ambient_color; 
 	}
 	
+	//float d = get_depth();
 	vec4 sampled_color = texture(tex2d, texco);
 	//vec4 sampled_color = vec4(p,p,p,1);
-	frag_color = sampled_color * shadow_factor * (vec4(diffuse_color,1) + vec4(specular_color,1));
+
+	//float frensel_factor = dot(frag_normal, dir_view_ws);
+	//frensel_factor = smoothstep(0.1f, 0.5f, frensel_factor);
+
+	//frag_color = (sampled_color * shadow_factor * (vec4(diffuse_color,1) + vec4(specular_color,1))) + (vec4(1,1,1,1)*(1.f-frensel_factor));
+	frag_color = vec4((sampled_color * shadow_factor * (vec4(diffuse_color,1) + vec4(specular_color,1))).xyz,1);// + (vec4(1,1,1,1)*(1.f-frensel_factor));
 }

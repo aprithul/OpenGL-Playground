@@ -4,6 +4,7 @@
 #include "stb_image.h"
 #include "glew.h"
 #include "Entity.hpp"
+#include "Particle.hpp"
 #include "SDL.h"
 
 extern SDL_Window* window;
@@ -13,7 +14,7 @@ struct WorldData
 {
 	Vec3f light_dir;
 	GLuint light_depth_map;
-	Mat4x4 light_view;
+	Mat4x4 light_view_proj;
 	Vec3f camera_pos;
 	float bias;
 	int lighting_mode;
@@ -24,6 +25,7 @@ struct UniformLoc
 {
 	GLint mvp = 0;
 	GLint model = 0;
+	GLint view_projection = 0;
 	GLint texture_diffuse = 0;
 	GLint texture_normal = 0;
 	GLint texture_parallax = 0;
@@ -59,14 +61,18 @@ struct Shader
 		uniform_loc.lighting_mode = glGetUniformLocation(shader_program, "lighting_mode");
 		uniform_loc.parallax_scale = glGetUniformLocation(shader_program, "parallax_scale");
 		uniform_loc.texture_shadow_depth = glGetUniformLocation(shader_program, "shadowDepthMap");
+		uniform_loc.view_projection = glGetUniformLocation(shader_program, "view_projection");
 	}
 };
 
 int InitOpenglWindow(Int_32 w, Int_32 h);
 GLuint make_depth_framebuffer(int w, int h, GLuint* depth_texture);
 GLuint make_frame_buffer();
+GLuint make_color_framebuffer(int w, int h, GLuint* color_texture, bool has_depth_buffer);
 void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& projection, const Mat4x4& view, const Mat4x4& model, Shader& shader, GLfloat parallax_scale, GLenum mode = GL_LINE_LOOP);
 void make_mesh(Vertex* vertices, Int_32* indices, Int_32 vertex_count, Int_32 index_count, Uint_32& vao, int attrib_count, bool is_textured);
 void make_texture(const char* texture_path, GLuint* texture, GLint internal_format, bool flip);
+void make_particle_mesh(ParticleEmitter& particle_emmiter);
+void draw_particle_emitter(ParticleEmitter& particle_emitter, Shader& shader, const Mat4x4& view, const Mat4x4& projection, GLenum mode);
 
 #endif // !RENDERING_HPP

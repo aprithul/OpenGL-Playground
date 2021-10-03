@@ -18,9 +18,9 @@ void init_gui(SDL_Window* window, SDL_GLContext gl_context )
 	ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
 	ImGui_ImplOpenGL3_Init(glsl_version);
 }
-void draw_gui(int* light_mode, int* shadow_mode, float* bias, float* parallax_scale)
+void configure_lighting_parameter(int* light_mode, int* shadow_mode, float* bias, float* parallax_scale, bool* render_outline)
 {
-	if (!ImGui::Begin("Control panel"))
+	if (!ImGui::Begin("Lighting Configuration"))
 	{
 		// Early out if the window is collapsed, as an optimization.
 		ImGui::End();
@@ -55,7 +55,15 @@ void draw_gui(int* light_mode, int* shadow_mode, float* bias, float* parallax_sc
 	ImGui::PushID(parallax_scale);
 	ImGui::InputFloat("", parallax_scale, 0.01f, 0.01f, "%0.5f");
 	ImGui::PopID();
+
+	ImGui::NewLine();
+	ImGui::Text("Show Outline");
+	ImGui::SameLine();
+	ImGui::PushID(render_outline);
+	ImGui::Checkbox("", render_outline);
+	ImGui::PopID();
 	ImGui::PopItemWidth();
+
 	//if (ImGui::BeginCombo("light_mode_combo", "0"))
 	//{
 	//	ImGui::EndCombo();
@@ -65,6 +73,49 @@ void draw_gui(int* light_mode, int* shadow_mode, float* bias, float* parallax_sc
 
 	ImGui::End();
 }
+
+void configure_scene(float* fov_h, float* fov_v, float* n, float* f)
+{
+
+	if (!ImGui::Begin("Scene configuration"))
+	{
+		// Early out if the window is collapsed, as an optimization.
+		ImGui::End();
+	}
+
+	ImGui::NewLine();
+	ImGui::Text("fov horizontal:");
+	ImGui::SameLine();
+	ImGui::PushID(fov_h);
+	ImGui::InputFloat("", fov_h, 0.5f, 5, "%0.5f");
+	ImGui::PopID();
+
+	ImGui::NewLine();
+	ImGui::Text("fov vertical");
+	ImGui::SameLine();
+	ImGui::PushID(fov_v);
+	ImGui::InputFloat("", fov_v, 0.5f , 5, "%0.5f");
+	ImGui::PopID();
+
+	ImGui::NewLine();
+	ImGui::Text("near");
+	ImGui::SameLine();
+	ImGui::PushID(n);
+	ImGui::InputFloat("", n, 0.5f, 1.f, "%0.5f");
+	ImGui::PopID();
+
+	ImGui::NewLine();
+	ImGui::Text("far");
+	ImGui::SameLine();
+	ImGui::PushID(f);
+	ImGui::InputFloat("", f, 0.5f, 1.f, "%0.5f");
+	ImGui::PopID();
+
+	ImGui::End();
+}
+
+
+
 void cleanup_gui()
 {
 	ImGui_ImplOpenGL3_Shutdown();

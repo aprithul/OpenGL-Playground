@@ -40,6 +40,7 @@ void main()
 
 	gl_Position = mvp * vec4(position.xyz,1);
 	light_space_position = light_mvp * vec4(position.xyz,1);
+	//light_space_position /= light_space_position.w;
 	//light_space_position = vec3(light_space_position_pre_perspective_divide.xyz/light_space_position_pre_perspective_divide.w);
 
 	//frag_pos_ts = TBN_t * vec3(model * vec4(position.xyz,1));

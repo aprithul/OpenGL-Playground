@@ -83,7 +83,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\imgui\backends;D:\FromScratch\Asteroid\Vendor\imgui;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\ASSIMP\include\;D:\FromScratch\Asteroid\Vendor\assimp-5.0.1\assimp-5.0.1\include\;D:\FromScratch\Asteroid\Vendor\imgui\backends;D:\FromScratch\Asteroid\Vendor\imgui;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
@@ -91,8 +91,8 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32s.lib;OpenGL32.lib;version.lib;imm32.lib;winmm.lib;Setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\FromScratch\Asteroid\Vendor\glew-2.1.0\lib\Release\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDLmain\Libs\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDL\Libs\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32s.lib;OpenGL32.lib;version.lib;imm32.lib;winmm.lib;Setupapi.lib;assimp-vc141-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\FromScratch\Asteroid\Vendor\ASSIMP\code\Release;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\lib\Release\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDLmain\Libs\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDL\Libs\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -115,7 +115,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\imgui\backends;D:\FromScratch\Asteroid\Vendor\imgui;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\FromScratch\Asteroid\Vendor\ASSIMP\include\;D:\FromScratch\Asteroid\Vendor\assimp-5.0.1\assimp-5.0.1\include\;D:\FromScratch\Asteroid\Vendor\imgui\backends;D:\FromScratch\Asteroid\Vendor\imgui;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\include\GL;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <ShowIncludes>true</ShowIncludes>
@@ -124,8 +124,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32s.lib;OpenGL32.lib;version.lib;imm32.lib;winmm.lib;Setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\FromScratch\Asteroid\Vendor\glew-2.1.0\lib\Release\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDLmain\Libs\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDL\Libs\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;glew32s.lib;OpenGL32.lib;version.lib;imm32.lib;winmm.lib;Setupapi.lib;assimp-vc141-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\FromScratch\Asteroid\Vendor\ASSIMP\code\Release;D:\FromScratch\Asteroid\Vendor\glew-2.1.0\lib\Release\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDLmain\Libs\Win32;D:\FromScratch\Asteroid\Vendor\SDL2-2.0.16\VisualC\SDL\Libs\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -155,6 +155,7 @@
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Particle.cpp" />
     <ClCompile Include="Rendering.cpp" />
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
@@ -163,6 +164,7 @@
     <ClInclude Include="Entity.hpp" />
     <ClInclude Include="GUI.hpp" />
     <ClInclude Include="MathUtil.hpp" />
+    <ClInclude Include="Particle.hpp" />
     <ClInclude Include="Platform.hpp" />
     <ClInclude Include="Rendering.hpp" />
     <ClInclude Include="stb_image.h" />
@@ -171,14 +173,28 @@
     <ClInclude Include="Vertex.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\blurr_pass.f" />
+    <None Include="Shaders\blur_pass.v" />
+    <None Include="Shaders\depth.f" />
+    <None Include="Shaders\depth.v" />
     <None Include="Shaders\diffuse.f" />
     <None Include="Shaders\diffuse.v" />
     <None Include="Shaders\diffuse_line.f" />
     <None Include="Shaders\diffuse_line.v" />
     <None Include="Shaders\diffuse_shadow.f" />
     <None Include="Shaders\diffuse_shadow.v" />
+    <None Include="Shaders\Particle.f" />
+    <None Include="Shaders\Particle.fs" />
+    <None Include="Shaders\Particle.v" />
+    <None Include="Shaders\Particle.vs" />
+    <None Include="Shaders\quad_renderer.f" />
+    <None Include="Shaders\quad_renderer.v" />
     <None Include="Shaders\shadow.f" />
     <None Include="Shaders\shadow.v" />
+    <None Include="Shaders\shadow_mapping.fs" />
+    <None Include="Shaders\shadow_mapping.vs" />
+    <None Include="Shaders\single_color.f" />
+    <None Include="Shaders\single_color.v" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

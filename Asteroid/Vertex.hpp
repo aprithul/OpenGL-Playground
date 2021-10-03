@@ -19,4 +19,13 @@ struct Vertex
 	float tz;
 };
 
+struct VertexMin
+{
+	float x;
+	float y;
+	float z;
+	float u;
+	float v;
+};
+
 #endif // !VERTEX_HPP

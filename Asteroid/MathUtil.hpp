@@ -140,6 +140,7 @@ struct Mat4x4
 	Float_32 data[4 * 4];
 	Mat4x4();
 	Mat4x4(Vec4f _c0, Vec4f _c1, Vec4f _c2, Vec4f _c3);
+	Mat4x4(Vec3f _c0, Vec3f _c1, Vec3f _c2);
 	Mat4x4(Float_32 v00, Float_32 v01, Float_32 v02, Float_32 v03,
 		Float_32 v10, Float_32 v11, Float_32 v12, Float_32 v13,
 		Float_32 v20, Float_32 v21, Float_32 v22, Float_32 v23,
@@ -168,7 +169,7 @@ struct Mat4x4
 	Float_32& operator()(Uint_32 row, Uint_32 col);
 
 	static Mat4x4 Orthogrpahic(Float_32 _left, Float_32 _right, Float_32 _bottom, Float_32 _top, Float_32 _near, Float_32 _far);
-	static Mat4x4 Perspective(Float_32 fov_h, Float_32 fov_v, Float_32 near, Float_32 far, Float_32& aspect_ratio);
+	static Mat4x4 Perspective(Float_32 fov_v, Float_32 near, Float_32 far, Float_32 aspect_ratio);
 	static Mat4x4 Identity();
 };
 
@@ -603,7 +604,7 @@ Vec4f& Vec4f::operator*=(const Vec4f& other)
 
 Vec4f Vec4f::operator*(Float_32 s) const
 {
-	return Vec4f{ x*s, y*s, z*s, w*w };
+	return Vec4f{ x*s, y*s, z*s, w*s };
 }
 
 Vec4f& Vec4f::operator*=(Float_32 s)
@@ -879,6 +880,16 @@ Mat4x4::Mat4x4()
 	_m(2, 0) = 0; _m(2, 1) = 0; _m(2, 2) = 0; _m(2, 3) = 0;
 	_m(3, 0) = 0; _m(3, 1) = 0; _m(3, 2) = 0; _m(3, 3) = 0;
 }
+
+Mat4x4::Mat4x4(Vec3f _c0, Vec3f _c1, Vec3f _c2)
+{
+	Mat4x4& _m = (*this);
+	_m(0, 0) = _c0.x; _m(0, 1) = _c1.x; _m(0, 2) = _c2.x; _m(0, 3) = 0;
+	_m(1, 0) = _c0.y; _m(1, 1) = _c1.y; _m(1, 2) = _c2.y; _m(1, 3) = 0;
+	_m(2, 0) = _c0.z; _m(2, 1) = _c1.z; _m(2, 2) = _c2.z; _m(2, 3) = 0;
+	_m(3, 0) = 0	; _m(3, 1) = 0    ; _m(3, 2) =  0	; _m(3, 3) = 1;
+}
+
 
 Mat4x4::Mat4x4(Vec4f _c0, Vec4f _c1, Vec4f _c2, Vec4f _c3)
 {
@@ -1204,16 +1215,17 @@ Mat4x4 Mat4x4::Orthogrpahic(Float_32 _left, Float_32 _right, Float_32 _bottom, F
 					0,	0,	0,	1 };
 }
 
-Mat4x4 Mat4x4::Perspective(Float_32 fov_h, Float_32 fov_v, Float_32 near, Float_32 far, Float_32& aspect_ratio)
+Mat4x4 Mat4x4::Perspective(Float_32 fov_v, Float_32 near, Float_32 far, Float_32 aspect_ratio)
 {
 	// distance to projection plane
 	Float_32 g = 1.f / tanf(fov_v*DEG_TO_RAD/2.f); // vertical fov is fixed 60.0 degrees
+	Float_32 k = far / (far - near);
 	// aspect ratio
-	aspect_ratio = tanf(fov_h*DEG_TO_RAD / 2.f) * g;
+	//aspect_ratio = tanf(fov_h*DEG_TO_RAD / 2.f) * g;
 
 	return Mat4x4{ g / aspect_ratio,	0,	0,	0,
 					0,	g,	0,	0,
-					0,	0,	far/(far-near),	-(near*far)/(far-near),
+					0,	0,	k,	-near * k,
 					0,	0,	1,	0};
 }
 

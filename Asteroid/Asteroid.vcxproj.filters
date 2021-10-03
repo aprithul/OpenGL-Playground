@@ -54,6 +54,9 @@
     <ClCompile Include="GUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Particle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vertex.hpp">
@@ -86,6 +89,9 @@
     <ClInclude Include="Platform.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Particle.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\diffuse.v">
@@ -110,6 +116,48 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\shadow.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\depth.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\depth.v">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\single_color.v">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\single_color.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\quad_renderer.v">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\quad_renderer.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\blur_pass.v">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\blurr_pass.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Particle.v">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Particle.f">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow_mapping.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow_mapping.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Particle.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\Particle.fs">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
