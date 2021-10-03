@@ -61,12 +61,12 @@ Entity make_space_ship()
 	};
 	int indices[3] = { 0,1,2 };
 	Entity space_ship;
-	space_ship.index_count = 3;
+	space_ship.index_counts[0] = 3;
 	space_ship.transform.position = { 0,0,1 };
 	space_ship.transform.rotation = { 0,0,0 };
 	space_ship.angular_speed = 1.0f;
-	make_mesh(vertices, indices, 3, 3, space_ship.vao, 4, false);
-	//space_ship.vao_count++;
+	make_mesh(vertices, indices, 3, 3, space_ship.vaos[0], 4, false);
+	space_ship.vao_count++;
 	return space_ship;
 }
 
@@ -83,11 +83,11 @@ Entity make_light_entity()
 	};
 	int indices[3] = { 0,1,2 };
 	Entity light;
-	light.index_count = 3;
+	light.index_counts[0] = 3;
 	light.transform.position = { 0,2,0 };
 	light.transform.rotation = { PI / 2, 0, 0 };// { PI / 2, 0, 0 };
-	make_mesh(vertices, indices, 3, 3, light.vao, 2, false);
-	//light.vao_count++;
+	make_mesh(vertices, indices, 3, 3, light.vaos[0], 2, false);
+	light.vao_count++;
 	return light;
 }
 
@@ -101,41 +101,39 @@ Entity make_quad()
 	};
 	int indices[6] = { 0,1,2,0,2,3 };
 	Entity quad;
-	quad.index_count = 6;
+	quad.index_counts[0] = 6;
 	quad.transform.position = { 0,0,0 };
 	quad.transform.rotation = { 0,0,0 };
 	quad.angular_speed = 1.0f;
 	quad.texture_diffuse = 0;
-	make_mesh(vertices, indices, 4, 6, quad.vao, 4, true);
-	//quad.vao_count++;
+	make_mesh(vertices, indices, 4, 6, quad.vaos[0], 4, true);
+	quad.vao_count++;
 	return quad;
 }
 
 
-Entity make_gameobject(const char* model_file_path, const char* diffuse_texture_path, const char* normal_texture_path, const char* parallex_texture_path, const char* specular_texture_path, bool flip, Float_32 import_scale)
+Entity make_gameobject(const char* obj_file_path, const char* diffuse_texture_path, const char* normal_texture_path, const char* parallex_texture_path, const char* specular_texture_path, bool flip, Float_32 import_scale)
 {
 
 	Entity entity;
-	std::vector<Float_32> vertices;
-	std::vector<Int_32> indices;
-	//std::vector< std::vector<Int_32>> indices;
+	std::vector<std::vector<Float_32>> vertices;
+	std::vector< std::vector<Int_32>> indices;
 	//load_obj(obj_file_path, vertices, indices, import_scale);
-	load_model(model_file_path, vertices, indices, import_scale);
+
+	load_model(obj_file_path, vertices, indices, import_scale);
 
 
-	entity.index_count = indices.size();
-	make_mesh(reinterpret_cast<Vertex*>(&vertices[0]), &indices[0], vertices.size() / 14, indices.size(), entity.vao, 5, false);
+	//entity.index_counts[0] = indices.size();
+	//make_mesh(reinterpret_cast<Vertex*>(&vertices[0]), &_indices[0], vertices.size() / 14, _indices.size(), entity.vaos[0], 5, false);
 	//entity.vao_count++;
 
-	/*int i = 0;
-	for (auto& ind_arr : indices)
+	for (int i=0; i<vertices.size(); i++)
 	{
-		entity.index_counts[i] = ind_arr.size();
-		make_mesh(reinterpret_cast<Vertex*>(&vertices[0]), &ind_arr[0], vertices.size() / 14, entity.index_counts[i], entity.vaos[i], 5, false);
-
+		make_mesh(reinterpret_cast<Vertex*>(&vertices[i][0]), &indices[i][0], vertices[i].size() / 14, indices[i].size(), entity.vaos[i], 5, false);
+		entity.index_counts[i] = indices[i].size();
 		entity.vao_count++;
-		i++;
-	}*/
+	}
+
 	entity.transform.position = { 0,0,0 };
 	entity.transform.rotation = { 0,0,0 };
 

@@ -118,6 +118,11 @@ int main(int argc, char *args[])
 	//sphere.position = { -0.05f, 0, 0 };
 	//Entity cube = make_gameobject("Asset/plane.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", 0.05f);
 	//Entity cube = make_gameobject("Asset/cube.obj", "Asset/brickwall.jpg", "Asset/brickwall_normal.jpg", "Asset/brickwall_disp.jpg", 0.05f);
+	
+	Entity avatar = make_gameobject("Asset/Walking.fbx", "Asset/mini_knight_fem.png", nullptr, nullptr, nullptr, true, 0.005f);
+	avatar.transform.position = { 1,0,0 };
+	//avatar.transform.rotation = { PI / 2.f,0,PI / 2.f };
+
 	Entity plane = make_gameobject("Asset/plane.obj", "Asset/bricks2.jpg", "Asset/bricks2_normal.jpg", "Asset/bricks2_disp.jpg", nullptr, false, 4.f);
 	plane.transform.position = { 0,0,0 };
 	plane.transform.rotation = { -PI / 2.f,0,0 };
@@ -316,6 +321,7 @@ int main(int argc, char *args[])
 		Mat4x4 cyborg_transform = cyborg.transform.get_transform();
 		Mat4x4 plane_transform = plane.transform.get_transform();
 		Mat4x4 quad_transform = quad.transform.get_transform();
+		Mat4x4 avatar_transform = avatar.transform.get_transform();
 
 		// Set camera position and orientation
 		Mat4x4 cam_transform = camera.transform.get_transform();
@@ -351,6 +357,8 @@ int main(int argc, char *args[])
 		glClear(GL_DEPTH_BUFFER_BIT);
 		draw_entity(plane, world_data, light_proj, light_transform.GetInverse(), plane_transform, shader_shadow, parallax_scale, GL_TRIANGLES);
 		draw_entity(cube, world_data, light_proj, light_transform.GetInverse(), cube_transform, shader_shadow, parallax_scale, GL_TRIANGLES);
+		draw_entity(avatar, world_data, light_proj, light_transform.GetInverse(), avatar_transform, shader_shadow, parallax_scale, GL_TRIANGLES);
+
 		//draw_entity(cyborg, world_data, light_proj, light_transform.GetInverse(), cyborg_transform, shader_shadow, parallax_scale, GL_TRIANGLES);
 
 
@@ -385,6 +393,7 @@ int main(int argc, char *args[])
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		draw_entity(plane, world_data, projection, cam_transform.GetInverse(), plane_transform, shader_textured, parallax_scale, GL_TRIANGLES);
 		draw_entity(cube, world_data, projection, cam_transform.GetInverse(), cube_transform, shader_textured, parallax_scale, GL_TRIANGLES);
+		draw_entity(avatar, world_data, projection, cam_transform.GetInverse(), avatar_transform, shader_textured, parallax_scale, GL_TRIANGLES);
 		//draw_entity(light, world_data, projection, cam_transform.GetInverse(), light_transform, shader_shape, 0, GL_TRIANGLES);
 
 		if (render_outline)

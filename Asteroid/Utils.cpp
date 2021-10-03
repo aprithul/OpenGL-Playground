@@ -46,7 +46,7 @@ Vec3f calculate_tangent_in_tangent_space(Vec3f pos1, Vec3f pos2, Vec3f pos3, Vec
 
 
 // vertices contain flattened Vertex data ( see Vertex struct for layout )
-bool load_model(const std::string& pFile, std::vector<Float_32>& vertices, std::vector<Int_32> &indices, Float_32 import_scale) {
+bool load_model(const std::string& pFile, std::vector<std::vector<Float_32>>& vertices, std::vector< std::vector<Int_32>> &indices, Float_32 import_scale) {
 	// Create an instance of the Importer class
 	Assimp::Importer importer;
 
@@ -68,6 +68,9 @@ bool load_model(const std::string& pFile, std::vector<Float_32>& vertices, std::
 	for (int i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* _mesh = scene->mMeshes[i];
+		vertices.push_back(std::vector<Float_32>());
+		indices.push_back(std::vector<Int_32>());
+
 		if (_mesh->HasFaces() == false)
 		{
 			std::cout << "Mesh "<<pFile<<":"<<i<<" , doesn't have faces, skipping" << std::endl;
@@ -79,7 +82,7 @@ bool load_model(const std::string& pFile, std::vector<Float_32>& vertices, std::
 				aiFace _face = _mesh->mFaces[j];
 				for (int k = 0; k < _face.mNumIndices; k++)
 				{
-					indices.push_back(_face.mIndices[k]);
+					indices.back().push_back(_face.mIndices[k]);
 				}
 			}
 
@@ -89,9 +92,9 @@ bool load_model(const std::string& pFile, std::vector<Float_32>& vertices, std::
 				if (_mesh->HasPositions())
 				{
 					aiVector3D pos = _mesh->mVertices[j];
-					vertices.push_back(pos.x * import_scale);
-					vertices.push_back(pos.y * import_scale);
-					vertices.push_back(pos.z * import_scale);
+					vertices.back().push_back(pos.x * import_scale);
+					vertices.back().push_back(pos.y * import_scale);
+					vertices.back().push_back(pos.z * import_scale);
 				}
 				else
 				{
@@ -101,58 +104,63 @@ bool load_model(const std::string& pFile, std::vector<Float_32>& vertices, std::
 				if (_mesh->HasVertexColors(0))
 				{
 					aiColor4D col = _mesh->mColors[0][j];
-					vertices.push_back(col.r);
-					vertices.push_back(col.g);
-					vertices.push_back(col.b);
+					vertices.back().push_back(col.r);
+					vertices.back().push_back(col.g);
+					vertices.back().push_back(col.b);
 				}
 				else
 				{
-					vertices.push_back(0);
-					vertices.push_back(0);
-					vertices.push_back(0);
+					vertices.back().push_back(1.f);
+					vertices.back().push_back(1.f);
+					vertices.back().push_back(1.f);
 				}
 
 				if (_mesh->HasNormals())
 				{
 					aiVector3D normal = _mesh->mNormals[j];
-					vertices.push_back(normal.x);
-					vertices.push_back(normal.y);
-					vertices.push_back(normal.z);
+					vertices.back().push_back(normal.x);
+					vertices.back().push_back(normal.y);
+					vertices.back().push_back(normal.z);
 				}
 				else
 				{
-					vertices.push_back(0);
-					vertices.push_back(0);
-					vertices.push_back(0);
+					vertices.back().push_back(0);
+					vertices.back().push_back(0);
+					vertices.back().push_back(0);
 				}
 
 				if (_mesh->HasTextureCoords(0))
 				{
 					aiVector3D tex_co = _mesh->mTextureCoords[0][j];
-					vertices.push_back(tex_co.x);
-					vertices.push_back(tex_co.y);
+					vertices.back().push_back(tex_co.x);
+					vertices.back().push_back(tex_co.y);
 				}
 				else
 				{
-					vertices.push_back(0);
-					vertices.push_back(0);
+					vertices.back().push_back(0);
+					vertices.back().push_back(0);
 				}
 
 				if (_mesh->HasTangentsAndBitangents())
 				{
 					aiVector3D tangent = _mesh->mTangents[j];
-					vertices.push_back(tangent.x);
-					vertices.push_back(tangent.y);
-					vertices.push_back(tangent.z);
+					vertices.back().push_back(tangent.x);
+					vertices.back().push_back(tangent.y);
+					vertices.back().push_back(tangent.z);
 				}
 				else
 				{
-					vertices.push_back(0);
-					vertices.push_back(0);
-					vertices.push_back(0);
+					vertices.back().push_back(0);
+					vertices.back().push_back(0);
+					vertices.back().push_back(0);
 				}
 			}
 		}
+	}
+
+	for (int i = 0; i < scene->mNumAnimations; i++)
+	{
+
 	}
 
 	std::cout << scene->mNumMeshes;

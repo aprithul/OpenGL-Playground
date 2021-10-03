@@ -352,8 +352,8 @@ void make_particle_mesh(ParticleEmitter& particle_emmiter)
 
 	// make vao and set vertex attributes
 	//GLuint vertex_array;
-	glGenVertexArrays(1, &particle_emmiter.vao);
-	glBindVertexArray(particle_emmiter.vao);
+	glGenVertexArrays(1, &particle_emmiter.vaos[0]);
+	glBindVertexArray(particle_emmiter.vaos[0]);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
 
@@ -447,7 +447,7 @@ void draw_particle_emitter(ParticleEmitter& particle_emitter, Shader& shader, co
 	glBindBuffer(GL_ARRAY_BUFFER, particle_emitter.vbo);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(InstanceData) * particle_count, instance_data);
 	
-	glBindVertexArray(particle_emitter.vao);
+	glBindVertexArray(particle_emitter.vaos[0]);
 	glUniformMatrix4fv(shader.uniform_loc.view_projection, 1, GL_FALSE, (projection ).data);
 	glUniform1i(shader.uniform_loc.texture_diffuse, 0);
 
@@ -471,26 +471,29 @@ void draw_entity(const Entity& entity, WorldData& world_data, const Mat4x4& proj
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, entity.texture_specular);
 
-	glBindVertexArray(entity.vao);
-	glUniformMatrix4fv(shader.uniform_loc.model, 1, GL_FALSE, model.data);
-	glUniformMatrix4fv(shader.uniform_loc.mvp, 1, GL_FALSE, (projection*view*model).data);
-	glUniformMatrix4fv(shader.uniform_loc.light_mvp, 1, GL_FALSE, (world_data.light_view_proj*model).data);
+	for (int i = 0; i < entity.vao_count; i++)
+	{
+		glBindVertexArray(entity.vaos[i]);
+		glUniformMatrix4fv(shader.uniform_loc.model, 1, GL_FALSE, model.data);
+		glUniformMatrix4fv(shader.uniform_loc.mvp, 1, GL_FALSE, (projection*view*model).data);
+		glUniformMatrix4fv(shader.uniform_loc.light_mvp, 1, GL_FALSE, (world_data.light_view_proj*model).data);
 
-	glUniform1i(shader.uniform_loc.texture_diffuse, 0);
-	glUniform1i(shader.uniform_loc.texture_normal, 1);
-	glUniform1i(shader.uniform_loc.texture_parallax, 2);
-	glUniform1i(shader.uniform_loc.texture_shadow_depth, 3);
-	glUniform1i(shader.uniform_loc.texture_specular, 4);
-	glUniform3f(shader.uniform_loc.light_dir, world_data.light_dir.x, world_data.light_dir.y, world_data.light_dir.z);
-	glUniform3f(shader.uniform_loc.camera_pos, world_data.camera_pos.x, world_data.camera_pos.y, world_data.camera_pos.z);
-	glUniform1i(shader.uniform_loc.lighting_mode, world_data.lighting_mode);
-	glUniform1f(shader.uniform_loc.parallax_scale, parallax_scale);
-	GLuint loc_bias = glGetUniformLocation(shader.shader_program, "bias");
-	glUniform1f(loc_bias, world_data.bias);
-	GLuint loc_shadow_mode = glGetUniformLocation(shader.shader_program, "shadow_mode");
-	glUniform1i(loc_shadow_mode, world_data.shadow_mode);
+		glUniform1i(shader.uniform_loc.texture_diffuse, 0);
+		glUniform1i(shader.uniform_loc.texture_normal, 1);
+		glUniform1i(shader.uniform_loc.texture_parallax, 2);
+		glUniform1i(shader.uniform_loc.texture_shadow_depth, 3);
+		glUniform1i(shader.uniform_loc.texture_specular, 4);
+		glUniform3f(shader.uniform_loc.light_dir, world_data.light_dir.x, world_data.light_dir.y, world_data.light_dir.z);
+		glUniform3f(shader.uniform_loc.camera_pos, world_data.camera_pos.x, world_data.camera_pos.y, world_data.camera_pos.z);
+		glUniform1i(shader.uniform_loc.lighting_mode, world_data.lighting_mode);
+		glUniform1f(shader.uniform_loc.parallax_scale, parallax_scale);
+		GLuint loc_bias = glGetUniformLocation(shader.shader_program, "bias");
+		glUniform1f(loc_bias, world_data.bias);
+		GLuint loc_shadow_mode = glGetUniformLocation(shader.shader_program, "shadow_mode");
+		glUniform1i(loc_shadow_mode, world_data.shadow_mode);
 
-	glDrawElements(mode, entity.index_count, GL_UNSIGNED_INT, (void*)0);
+		glDrawElements(mode, entity.index_counts[i], GL_UNSIGNED_INT, (void*)0);
+	}
 }
 
 void make_texture(const char* texture_path, GLuint* texture, GLint internal_format, bool flip)
